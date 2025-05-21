@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schedule App</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <div class="main-content">
+            <div class="add-name-form">
+                <input type="text" id="name-input" placeholder="Enter a name...">
+                <button id="add-name-btn">Add</button>
+            </div>
+            <div id="names-list-container" class="names-list-container" data-container="names">
+                <!-- Name panels will be added here dynamically -->
+                <div class="empty-message">No names added yet</div>
+            </div>
+        </div>
+        
+        <div class="schedule-container">
+            <div class="schedule-panel" id="duty-panel" data-container="duty">
+                <h2>Duty</h2>
+                <div class="schedule-items"></div>
+            </div>
+            
+            <div class="schedule-panel" id="standby-panel" data-container="standby">
+                <h2>Stand By</h2>
+                <div class="schedule-items"></div>
+            </div>
+            
+            <div class="schedule-panel" id="rest-panel" data-container="rest">
+                <h2>Rest</h2>
+                <div class="schedule-items"></div>
+            </div>
+            
+            <div class="schedule-panel" id="home-panel" data-container="home">
+                <h2>Home</h2>
+                <div class="schedule-items"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
