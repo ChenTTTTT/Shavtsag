@@ -44,6 +44,50 @@ body {
     padding: 10px 20px;
 }
 
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.panel-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.panel-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.delete-panel-btn, .edit-panel-btn {
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.delete-panel-btn:hover {
+    background-color: #f0f0f0;
+    color: #ff5252;
+}
+
+.edit-panel-btn:hover {
+    background-color: #f0f0f0;
+    color: #2196F3;
+}
+
 .names-list-container {
     display: flex;
     flex-direction: row;
@@ -165,12 +209,19 @@ body {
     text-align: center;
 }
 
-.empty-message {
-    grid-column: 1 / -1;
+.empty-message, .empty-schedule-message {
     text-align: center;
-    color: #888;
-    padding: 40px;
+    color: #999;
+    padding: 20px;
     font-style: italic;
+}
+
+.empty-schedule-message {
+    width: 100%;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    padding: 40px 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 /* Trash panel */
@@ -243,9 +294,41 @@ body {
     background-color: #2980b9;
 }
 
+/* Schedule controls */
+.schedule-controls {
+    display: flex;
+    justify-content: center;
+    padding: 10px 20px;
+    background-color: #f5f5f5;
+    border-top: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
 
+.add-schedule-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
 
-/* Schedule panels */
+.add-schedule-btn:hover {
+    background-color: #45a049;
+}
+
+.add-schedule-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Schedule panel */
 .schedule-panel {
     background-color: #f5f5f5;
     border-radius: 8px;
@@ -260,6 +343,7 @@ body {
     flex: 1 0 calc(50% - 20px); /* Flex basis of roughly half width minus gap */
     max-width: calc(50% - 10px); /* Prevent panels from growing too wide */
     min-width: 250px; /* Ensure panels don't get too narrow */
+    padding: 15px;
 }
 
 .schedule-panel h2 {

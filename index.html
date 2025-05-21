@@ -29,26 +29,19 @@
         </div>
     </div>
     
+    <div class="schedule-controls">
+        <button id="add-schedule-btn" class="add-schedule-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                <path fill="none" d="M0 0h24v24H0z"/>
+                <path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z" fill="currentColor"/>
+            </svg>
+            Add Schedule Panel
+        </button>
+    </div>
+    
     <div class="schedule-container">
-        <div class="schedule-panel" id="duty-panel" data-container="duty">
-            <h2>Duty</h2>
-            <div class="schedule-items"></div>
-        </div>
-        
-        <div class="schedule-panel" id="standby-panel" data-container="standby">
-            <h2>Stand By</h2>
-            <div class="schedule-items"></div>
-        </div>
-        
-        <div class="schedule-panel" id="rest-panel" data-container="rest">
-            <h2>Rest</h2>
-            <div class="schedule-items"></div>
-        </div>
-        
-        <div class="schedule-panel" id="home-panel" data-container="home">
-            <h2>Home</h2>
-            <div class="schedule-items"></div>
-        </div>
+        <!-- Schedule panels will be added dynamically -->
+        <div class="empty-schedule-message">No schedule panels added yet. Click the "Add Schedule Panel" button to create one.</div>
     </div>
 
     <script src="script.js"></script>

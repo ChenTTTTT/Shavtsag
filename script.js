@@ -5,7 +5,9 @@ const namesListContainer = document.getElementById('names-list-container');
 const emptyMessage = document.querySelector('.empty-message');
 const scheduleItems = document.querySelectorAll('.schedule-items');
 const trashPanel = document.getElementById('trash-panel');
-const allDropContainers = document.querySelectorAll('[data-container]');
+const addScheduleBtn = document.getElementById('add-schedule-btn');
+const scheduleContainer = document.querySelector('.schedule-container');
+let allDropContainers = document.querySelectorAll('[data-container]');
 
 // Touch support variables
 let touchDragging = false;
@@ -21,17 +23,18 @@ let touchStartedOnNamePanel = false;
 
 // State
 let names = [];
-let assignments = {
-    duty: [],
-    standby: [],
-    rest: [],
-    home: []
-};
+let assignments = {};
+
+// Custom panel counter for generating unique IDs
+let customPanelCounter = 1;
 
 // Initialize app
 function init() {
     // Load data from local storage if available
     loadFromLocalStorage();
+    
+    // Check if we have any schedule panels
+    updateEmptyScheduleMessage();
     
     // Render all panels
     renderNamePanels();
@@ -50,6 +53,12 @@ function init() {
     
     // Set up horizontal swipe scrolling for names list
     setupNamesListScrolling();
+    
+    // Add event listener for adding new schedule panels
+    addScheduleBtn.addEventListener('click', addSchedulePanel);
+    
+    // Add event listeners for deleting schedule panels
+    setupDeletePanelListeners();
 }
 
 // Add a new name
@@ -136,6 +145,9 @@ function renderSchedulePanels() {
     for (const [container, namesList] of Object.entries(assignments)) {
         const scheduleItemsContainer = document.querySelector(`#${container}-panel .schedule-items`);
         
+        // Skip if the container doesn't exist
+        if (!scheduleItemsContainer) continue;
+        
         // Clear existing panels
         scheduleItemsContainer.innerHTML = '';
         
@@ -144,6 +156,9 @@ function renderSchedulePanels() {
             createNamePanel(name, container, scheduleItemsContainer);
         });
     }
+    
+    // Update the empty schedule message
+    updateEmptyScheduleMessage();
 }
 
 // Create a name panel
@@ -603,6 +618,209 @@ function handleNamesListWheel(e) {
     
     // Scroll horizontally instead of vertically
     namesListContainer.scrollLeft += e.deltaY;
+}
+
+// Add a new schedule panel
+function addSchedulePanel() {
+    // Prompt the user for a panel name
+    const panelName = prompt('Enter a name for the new schedule panel:');
+    
+    // If the user cancels or enters an empty name, don't create a panel
+    if (!panelName || panelName.trim() === '') {
+        return;
+    }
+    
+    // Check if the panel name already exists
+    if (isPanelNameTaken(panelName.trim())) {
+        alert('A panel with this name already exists. Please choose a different name.');
+        return;
+    }
+    
+    // Generate a unique ID for the new panel
+    const panelId = `panel-${customPanelCounter}`;
+    customPanelCounter++;
+    
+    // Create a new panel element
+    const panelElement = document.createElement('div');
+    panelElement.className = 'schedule-panel';
+    panelElement.id = `${panelId}-panel`;
+    panelElement.dataset.container = panelId;
+    
+    // Create panel header with title, edit and delete buttons
+    const panelHeader = document.createElement('div');
+    panelHeader.className = 'panel-header';
+    
+    const panelTitle = document.createElement('h2');
+    panelTitle.textContent = panelName.trim();
+    panelTitle.dataset.panelName = panelName.trim();
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'panel-buttons';
+    
+    const editButton = document.createElement('button');
+    editButton.className = 'edit-panel-btn';
+    editButton.dataset.panel = panelId;
+    editButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="none" d="M0 0h24v24H0z"/>
+            <path d="M15.728 9.686l-1.414-1.414L5 17.586V19h1.414l9.314-9.314zm1.414-1.414l1.414-1.414-1.414-1.414-1.414 1.414 1.414 1.414zM7.242 21H3v-4.243L16.435 3.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 21h-.001z" fill="currentColor"/>
+        </svg>
+    `;
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'delete-panel-btn';
+    deleteButton.dataset.panel = panelId;
+    deleteButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="none" d="M0 0h24v24H0z"/>
+            <path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" fill="currentColor"/>
+        </svg>
+    `;
+    
+    // Create the container for schedule items
+    const scheduleItemsContainer = document.createElement('div');
+    scheduleItemsContainer.className = 'schedule-items';
+    
+    // Assemble the panel
+    buttonContainer.appendChild(editButton);
+    buttonContainer.appendChild(deleteButton);
+    panelHeader.appendChild(panelTitle);
+    panelHeader.appendChild(buttonContainer);
+    panelElement.appendChild(panelHeader);
+    panelElement.appendChild(scheduleItemsContainer);
+    
+    // Add the panel to the schedule container
+    scheduleContainer.appendChild(panelElement);
+    
+    // Initialize the new panel's assignments array
+    assignments[panelId] = [];
+    
+    // Update drop containers
+    allDropContainers = document.querySelectorAll('[data-container]');
+    
+    // Set up drag and drop for the new panel
+    setupDragAndDrop();
+    
+    // Add event listeners for the buttons
+    deleteButton.addEventListener('click', () => deleteSchedulePanel(panelId));
+    editButton.addEventListener('click', () => editPanelName(panelId));
+    
+    // Update the empty schedule message
+    updateEmptyScheduleMessage();
+    
+    // Save to local storage
+    saveToLocalStorage();
+}
+
+// Delete a schedule panel
+function deleteSchedulePanel(panelId) {
+    // Move all names from the panel back to the names list
+    if (assignments[panelId] && assignments[panelId].length > 0) {
+        // Add all names back to the names list
+        names = [...names, ...assignments[panelId]];
+        
+        // Clear the panel's assignments
+        assignments[panelId] = [];
+    }
+    
+    // Remove the panel from the DOM
+    const panelElement = document.getElementById(`${panelId}-panel`);
+    if (panelElement) {
+        scheduleContainer.removeChild(panelElement);
+    }
+    
+    // Remove the panel from assignments
+    delete assignments[panelId];
+    
+    // Update drop containers
+    allDropContainers = document.querySelectorAll('[data-container]');
+    
+    // Update the UI
+    renderNamePanels();
+    updateEmptyScheduleMessage();
+    
+    // Save to local storage
+    saveToLocalStorage();
+}
+
+// Set up event listeners for panel buttons
+function setupDeletePanelListeners() {
+    // Set up delete button listeners
+    document.querySelectorAll('.delete-panel-btn').forEach(button => {
+        const panelId = button.dataset.panel;
+        button.addEventListener('click', () => deleteSchedulePanel(panelId));
+    });
+    
+    // Set up edit button listeners
+    document.querySelectorAll('.edit-panel-btn').forEach(button => {
+        const panelId = button.dataset.panel;
+        button.addEventListener('click', () => editPanelName(panelId));
+    });
+}
+
+// Update the empty schedule message based on whether there are any panels
+function updateEmptyScheduleMessage() {
+    const emptyMessage = document.querySelector('.empty-schedule-message');
+    if (!emptyMessage) return;
+    
+    // Check if we have any schedule panels
+    const panelCount = Object.keys(assignments).length;
+    
+    if (panelCount === 0) {
+        // Show the empty message
+        emptyMessage.style.display = 'block';
+    } else {
+        // Hide the empty message
+        emptyMessage.style.display = 'none';
+    }
+}
+
+// Check if a panel name is already taken
+function isPanelNameTaken(name) {
+    // Get all panel titles
+    const panelTitles = Array.from(document.querySelectorAll('.panel-header h2'));
+    
+    // Check if any panel has this name
+    return panelTitles.some(title => title.textContent.toLowerCase() === name.toLowerCase());
+}
+
+// Edit a panel's name
+function editPanelName(panelId) {
+    // Find the panel title element
+    const panelElement = document.getElementById(`${panelId}-panel`);
+    if (!panelElement) return;
+    
+    const panelTitle = panelElement.querySelector('.panel-header h2');
+    if (!panelTitle) return;
+    
+    // Get the current name
+    const currentName = panelTitle.textContent;
+    
+    // Prompt for a new name
+    const newName = prompt('Enter a new name for this panel:', currentName);
+    
+    // If the user cancels or enters an empty name, don't change anything
+    if (!newName || newName.trim() === '') {
+        return;
+    }
+    
+    // If the name hasn't changed, don't do anything
+    if (newName.trim() === currentName) {
+        return;
+    }
+    
+    // Check if the new name is already taken by another panel
+    if (isPanelNameTaken(newName.trim())) {
+        alert('A panel with this name already exists. Please choose a different name.');
+        return;
+    }
+    
+    // Update the panel title
+    panelTitle.textContent = newName.trim();
+    panelTitle.dataset.panelName = newName.trim();
+    
+    // Save to local storage
+    saveToLocalStorage();
 }
 
 // Initialize the app when the DOM is loaded
