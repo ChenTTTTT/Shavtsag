@@ -13,6 +13,11 @@ let draggedElement = null;
 let draggedElementClone = null;
 let initialTouchPos = { x: 0, y: 0 };
 let lastTouchPos = { x: 0, y: 0 };
+let isScrolling = false;
+let scrollStartTime = 0;
+let scrollThreshold = 10; // Minimum pixels to consider a scroll vs a drag
+let scrollTimeThreshold = 300; // Milliseconds to wait before allowing drag after scroll
+let touchStartedOnNamePanel = false;
 
 // State
 let names = [];
@@ -42,6 +47,9 @@ function init() {
     
     // Set up drag and drop
     setupDragAndDrop();
+    
+    // Set up horizontal swipe scrolling for names list
+    setupNamesListScrolling();
 }
 
 // Add a new name
@@ -192,10 +200,6 @@ function setupDragAndDrop() {
         container.addEventListener('dragover', handleDragOver);
         container.addEventListener('dragleave', handleDragLeave);
         container.addEventListener('drop', handleDrop);
-        
-        // Mobile touch events
-        container.addEventListener('touchmove', handleContainerTouchMove, { passive: false });
-        container.addEventListener('touchend', handleContainerTouchEnd, { passive: false });
     });
     
     // Prevent scrolling when touching name panels
@@ -255,81 +259,102 @@ function handleDrop(e) {
 
 // Handle touch start on a name panel
 function handleTouchStart(e) {
-    const touch = e.touches[0];
-    const panel = this;
+    // If we're already scrolling, don't allow drag to start
+    if (isScrolling) {
+        return;
+    }
     
-    // Store initial touch position
+    // Store the initial touch position
+    const touch = e.touches[0];
     initialTouchPos.x = touch.clientX;
     initialTouchPos.y = touch.clientY;
     lastTouchPos.x = touch.clientX;
     lastTouchPos.y = touch.clientY;
     
-    // Set a timeout to start dragging after a short hold
-    setTimeout(() => {
-        // Only start dragging if the finger is still down and hasn't moved much
-        if (e.touches.length > 0 && 
-            Math.abs(lastTouchPos.x - initialTouchPos.x) < 10 && 
-            Math.abs(lastTouchPos.y - initialTouchPos.y) < 10) {
-            
-            touchDragging = true;
-            draggedElement = panel;
-            
-            // Create a clone for visual dragging
-            draggedElementClone = panel.cloneNode(true);
-            draggedElementClone.classList.add('dragging');
-            draggedElementClone.style.position = 'fixed';
-            draggedElementClone.style.top = `${touch.clientY - panel.offsetHeight / 2}px`;
-            draggedElementClone.style.left = `${touch.clientX - panel.offsetWidth / 2}px`;
-            draggedElementClone.style.width = `${panel.offsetWidth}px`;
-            draggedElementClone.style.zIndex = '1000';
-            draggedElementClone.style.opacity = '0.8';
-            draggedElementClone.style.pointerEvents = 'none';
-            document.body.appendChild(draggedElementClone);
-            
-            // Make original semi-transparent
-            panel.style.opacity = '0.4';
-        }
-    }, 200); // 200ms hold to start dragging
+    // Get the name panel element
+    draggedElement = e.currentTarget;
+    touchStartedOnNamePanel = true;
+}
+
+function startTouchDrag(e) {
+    touchDragging = true;
+    draggedElementClone = draggedElement.cloneNode(true);
+    draggedElementClone.classList.add('dragging');
+    draggedElementClone.style.position = 'fixed';
+    draggedElementClone.style.top = `${e.touches[0].clientY - draggedElement.offsetHeight / 2}px`;
+    draggedElementClone.style.left = `${e.touches[0].clientX - draggedElement.offsetWidth / 2}px`;
+    draggedElementClone.style.width = `${draggedElement.offsetWidth}px`;
+    draggedElementClone.style.zIndex = '1000';
+    draggedElementClone.style.opacity = '0.8';
+    draggedElementClone.style.pointerEvents = 'none';
+    document.body.appendChild(draggedElementClone);
+    
+    // Make original semi-transparent
+    draggedElement.style.opacity = '0.4';
 }
 
 // Handle touch move on a name panel
 function handleTouchMove(e) {
-    if (!touchDragging) {
-        // Update last touch position for the hold detection
-        if (e.touches.length > 0) {
-            lastTouchPos.x = e.touches[0].clientX;
-            lastTouchPos.y = e.touches[0].clientY;
+    // If we're already scrolling and not dragging, don't start dragging
+    if (isScrolling && !touchDragging) return;
+    
+    // Get the current touch position
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+    
+    // If we're already dragging, continue the drag operation regardless of where we are
+    if (touchDragging) {
+        // Prevent default to avoid page scrolling or other touch behaviors
+        e.preventDefault();
+        
+        // Update the position
+        lastTouchPos.x = currentX;
+        lastTouchPos.y = currentY;
+        
+        // Move the clone
+        if (draggedElementClone) {
+            draggedElementClone.style.top = `${currentY - draggedElementClone.offsetHeight / 2}px`;
+            draggedElementClone.style.left = `${currentX - draggedElementClone.offsetWidth / 2}px`;
         }
+        
+        // Highlight the container under the touch point
+        const elementUnderTouch = document.elementFromPoint(currentX, currentY);
+        
+        // Find the container element
+        allDropContainers.forEach(container => {
+            if (container.contains(elementUnderTouch)) {
+                container.classList.add('drag-over');
+            } else {
+                container.classList.remove('drag-over');
+            }
+        });
+        
         return;
     }
     
-    e.preventDefault(); // Prevent scrolling while dragging
+    // If we're not dragging yet, determine whether to start dragging or scrolling
     
-    const touch = e.touches[0];
+    // Calculate the distance moved
+    const deltaX = Math.abs(currentX - initialTouchPos.x);
+    const deltaY = Math.abs(currentY - initialTouchPos.y);
     
-    // Move the clone with the finger
-    if (draggedElementClone) {
-        draggedElementClone.style.top = `${touch.clientY - draggedElement.offsetHeight / 2}px`;
-        draggedElementClone.style.left = `${touch.clientX - draggedElement.offsetWidth / 2}px`;
+    // If this is a horizontal movement in the names list container, prioritize scrolling
+    if (draggedElement.closest('#names-list-container') && 
+        deltaX > deltaY && 
+        deltaX > scrollThreshold) {
+        
+        // This is a horizontal swipe in the names list - initiate scrolling
+        isScrolling = true;
+        
+        // Let the container's touch move handler take over
+        return;
     }
-}
-
-// Handle touch move over a container
-function handleContainerTouchMove(e) {
-    if (!touchDragging) return;
     
-    // Check if the touch is over this container
-    const touch = e.touches[0];
-    const container = this;
-    const rect = container.getBoundingClientRect();
-    
-    if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
-        touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
-        // Highlight the container
-        container.classList.add('drag-over');
-    } else {
-        // Remove highlight
-        container.classList.remove('drag-over');
+    // If we haven't started dragging yet and moved enough distance vertically
+    // or we're not in the names list, start dragging
+    if (!touchDragging && (deltaY > scrollThreshold || !draggedElement.closest('#names-list-container'))) {
+        startTouchDrag(e);
     }
 }
 
@@ -356,7 +381,40 @@ function handleContainerTouchEnd(e) {
 
 // Handle touch end (drop)
 function handleTouchEnd(e) {
+    // Reset the touch started flag
+    touchStartedOnNamePanel = false;
+    
+    // Always reset scrolling state when touch ends
+    isScrolling = false;
+    
     if (!touchDragging) return;
+    
+    // Get the element under the touch point
+    const touch = e.changedTouches[0];
+    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    
+    // Find the container element
+    let containerElement = null;
+    let currentElement = dropTarget;
+    
+    // Traverse up the DOM to find a container
+    while (currentElement && !containerElement) {
+        if (currentElement.dataset && currentElement.dataset.container) {
+            containerElement = currentElement;
+        } else {
+            currentElement = currentElement.parentElement;
+        }
+    }
+    
+    // If we found a valid container, process the drop
+    if (containerElement && draggedElement) {
+        const name = draggedElement.dataset.name;
+        const sourceContainer = draggedElement.dataset.container;
+        const targetContainer = containerElement.dataset.container;
+        
+        // Process the drop
+        processDrop(name, sourceContainer, targetContainer);
+    }
     
     // Clean up
     if (draggedElementClone) {
@@ -422,6 +480,129 @@ function processDrop(name, sourceContainer, targetContainer) {
     // Update UI
     renderNamePanels();
     renderSchedulePanels();
+}
+
+// Set up horizontal swipe scrolling for names list
+function setupNamesListScrolling() {
+    // Add touch event listeners to the names list container
+    namesListContainer.addEventListener('touchstart', handleNamesListTouchStart, { passive: false });
+    namesListContainer.addEventListener('touchmove', handleNamesListTouchMove, { passive: false });
+    namesListContainer.addEventListener('touchend', handleNamesListTouchEnd, { passive: false });
+    
+    // Add mouse wheel event for horizontal scrolling on desktop
+    namesListContainer.addEventListener('wheel', handleNamesListWheel, { passive: false });
+    
+    // Add mouse drag scrolling for desktop
+    let isMouseDown = false;
+    let startX;
+    let scrollLeft;
+    
+    namesListContainer.addEventListener('mousedown', (e) => {
+        // Only handle direct clicks on the container, not on name panels
+        if (e.target === namesListContainer) {
+            isMouseDown = true;
+            namesListContainer.classList.add('active-scroll');
+            startX = e.pageX - namesListContainer.offsetLeft;
+            scrollLeft = namesListContainer.scrollLeft;
+            e.preventDefault();
+        }
+    });
+    
+    namesListContainer.addEventListener('mouseleave', () => {
+        isMouseDown = false;
+        namesListContainer.classList.remove('active-scroll');
+    });
+    
+    namesListContainer.addEventListener('mouseup', () => {
+        isMouseDown = false;
+        namesListContainer.classList.remove('active-scroll');
+    });
+    
+    namesListContainer.addEventListener('mousemove', (e) => {
+        // Don't scroll if we're dragging a name panel
+        if (!isMouseDown || touchDragging) return;
+        e.preventDefault();
+        const x = e.pageX - namesListContainer.offsetLeft;
+        const walk = (x - startX) * 2; // Scroll speed multiplier
+        namesListContainer.scrollLeft = scrollLeft - walk;
+    });
+}
+
+// Handle touch start on the names list container
+function handleNamesListTouchStart(e) {
+    // Store the initial touch position for all touches in the names list container
+    // even if they started on a name panel
+    const touch = e.touches[0];
+    initialTouchPos.x = touch.clientX;
+    initialTouchPos.y = touch.clientY;
+    
+    // Reset scrolling state
+    isScrolling = false;
+    scrollStartTime = Date.now();
+}
+
+// Handle touch move on the names list container
+function handleNamesListTouchMove(e) {
+    // If we're already dragging a name panel, don't allow scrolling
+    if (touchDragging) {
+        return;
+    }
+    
+    // Get the current touch position
+    const touch = e.touches[0];
+    const currentX = touch.clientX;
+    const currentY = touch.clientY;
+    
+    // Calculate the distance moved
+    const deltaX = initialTouchPos.x - currentX;
+    const deltaY = Math.abs(initialTouchPos.y - currentY);
+    const absDeltaX = Math.abs(deltaX);
+    
+    // If we're already scrolling or horizontal movement is significant and greater than vertical
+    if (isScrolling || (absDeltaX > scrollThreshold && absDeltaX > deltaY)) {
+        // Prevent default to avoid page scrolling
+        e.preventDefault();
+        
+        // Set scrolling state
+        isScrolling = true;
+        
+        // If touch started on a name panel and we haven't started dragging yet,
+        // prioritize scrolling over dragging
+        if (touchStartedOnNamePanel && !touchDragging) {
+            // Cancel any potential drag operation
+            draggedElement = null;
+        }
+        
+        // Scroll the container
+        namesListContainer.scrollLeft += deltaX;
+        
+        // Update the initial position for the next move
+        initialTouchPos.x = currentX;
+    }
+}
+
+// Handle touch end on the names list container
+function handleNamesListTouchEnd(e) {
+    // If we were scrolling, prevent drag events for a short time
+    if (isScrolling) {
+        setTimeout(() => {
+            isScrolling = false;
+        }, scrollTimeThreshold);
+    }
+}
+
+// Handle mouse wheel events for horizontal scrolling
+function handleNamesListWheel(e) {
+    // Don't scroll if we're dragging a name panel
+    if (touchDragging) {
+        return;
+    }
+    
+    // Prevent the default vertical scroll
+    e.preventDefault();
+    
+    // Scroll horizontally instead of vertically
+    namesListContainer.scrollLeft += e.deltaY;
 }
 
 // Initialize the app when the DOM is loaded
