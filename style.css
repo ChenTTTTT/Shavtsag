@@ -70,6 +70,7 @@ body {
     justify-content: center;
     background-color: #f9f9f9;
     transition: background-color 0.2s;
+    padding: 2px;
 }
 
 .name-slot.has-name {
@@ -80,6 +81,15 @@ body {
 .name-slot .name-panel {
     margin: 0;
     width: 100%;
+    background-color: #e0f7fa;
+    border: 1px solid #b2ebf2;
+    border-radius: 4px;
+    padding: 4px 8px;
+    text-align: center;
+    font-weight: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Names container */
