@@ -7,18 +7,12 @@
 
 body {
     background-color: #f5f5f5;
-    height: 100vh;
-    overflow: hidden;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-}
-
-body {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
     background-color: white;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 
@@ -78,9 +72,8 @@ body {
     background-color: transparent;
 }
 
-.name-slot .name-panel {
-    margin: 0;
-    width: 100%;
+/* Base styles for all name panels */
+.name-panel {
     background-color: #e0f7fa;
     border: 1px solid #b2ebf2;
     border-radius: 4px;
@@ -90,6 +83,28 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Specific styles for name panels in hour slots */
+.name-slot .name-panel {
+    margin: 0;
+    width: 100%;
+    display: block;
+    font-size: 0.9rem; /* Slightly smaller font for hour slots */
+    /* Allow panel to use most of the available width */
+    max-width: 100%; /* Use full width of the name slot */
+    box-sizing: border-box;
+    /* Ensure text is truncated properly */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Specific styles for name panels in the names list */
+.names-list-container .name-panel {
+    padding: 8px 15px;
+    margin: 0 5px;
+    min-width: 80px; /* Minimum width for name panels in the list */
 }
 
 /* Names container */
@@ -391,13 +406,12 @@ body {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     margin: 10px;
-    padding: 10px;
+    padding: 15px;
     min-width: 250px;
     max-width: 350px;
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 15px;
 }
 
 .schedule-panel h2 {
@@ -417,7 +431,7 @@ body {
     gap: 5px;
     min-height: 100px;
     height: auto; /* Allow content to determine height */
-    overflow-y: auto; /* Allow scrolling for many hours */
+    overflow-y: visible; /* Show all rows without scrolling */
     width: 100%;
     transition: none; /* Disable transitions to prevent resizing animations */
 }
@@ -429,6 +443,7 @@ body {
     min-height: 40px;
     border-bottom: 1px solid #eee;
     width: 100%;
+    overflow: hidden; /* Prevent content from overflowing */
 }
 
 .hour-row:last-child {
@@ -455,6 +470,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
+    min-width: 170px;
+    max-width: 90%; /* Use most of the available width in the hour row */
+    overflow: hidden;
 }
 
 .name-slot.has-name {
@@ -484,7 +503,7 @@ body {
 /* Responsive design */
 @media (max-width: 768px) {
     body {
-        overflow: hidden;
+        overflow-y: auto;
     }
     
     .names-container {
@@ -530,6 +549,7 @@ body {
         height: auto !important;
         min-width: 0;
         width: 100%;
+        overflow-y: visible !important; /* Ensure no scrolling on mobile */
     }
     
     /* Make name panels in schedule items more compact on mobile */

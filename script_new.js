@@ -9,7 +9,7 @@ let allDropContainers;
 
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded');
+    // Initialize application
     
     // Get DOM elements
     const nameInput = document.getElementById('name-input');
@@ -19,12 +19,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const addScheduleBtn = document.getElementById('add-schedule-btn');
     const emptyMessage = document.querySelector('.empty-schedule-message');
     
-    console.log('nameInput:', nameInput);
-    console.log('addNameBtn:', addNameBtn);
-    console.log('namesListContainer:', namesListContainer);
-    console.log('scheduleContainer:', scheduleContainer);
-    console.log('addScheduleBtn:', addScheduleBtn);
-    console.log('emptyMessage:', emptyMessage);
+
+
+
+
+
+
     
     // Load data from localStorage
     loadFromLocalStorage();
@@ -35,18 +35,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up event listeners
     nameInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-            console.log('Enter key pressed');
+
             addName();
         }
     });
     
     addNameBtn.addEventListener('click', function() {
-        console.log('Add name button clicked');
+
         addName();
     });
     
     addScheduleBtn.addEventListener('click', function() {
-        console.log('Add schedule button clicked');
+
         addSchedulePanel();
     });
     
@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                console.log('DOM changed, updating drop containers');
+
                 // Update drop containers and setup drag and drop again
                 allDropContainers = document.querySelectorAll('[data-container]');
                 setupDragAndDrop();
@@ -87,10 +87,10 @@ function formatHour(hour) {
 
 // Add a new name
 function addName() {
-    console.log('addName function called');
+
     const nameInput = document.getElementById('name-input');
     const name = nameInput.value.trim();
-    console.log('Name to add:', name);
+
     
     // Validate input
     if (name === '') {
@@ -149,7 +149,7 @@ function addName() {
 
 // Create a name panel element
 function createNamePanel(name, container, parentElement) {
-    console.log('Creating name panel:', name, 'in container:', container);
+
     
     const panel = document.createElement('div');
     panel.className = 'name-panel';
@@ -168,7 +168,7 @@ function createNamePanel(name, container, parentElement) {
     // Add to parent
     parentElement.appendChild(panel);
     
-    console.log('Created panel element:', panel);
+
     
     return panel;
 }
@@ -197,36 +197,36 @@ function renderNamePanels() {
 
 // Render all schedule panels
 function renderSchedulePanels() {
-    console.log('Rendering schedule panels');
+
     
     // Clean up any invalid panel entries
     cleanupHourlyAssignments();
     
-    console.log('hourlyAssignments after cleanup:', hourlyAssignments);
+
     
     // Render each schedule panel
     for (const panelId of Object.keys(hourlyAssignments)) {
-        console.log('Rendering panel:', panelId);
+
         
         const panelElement = document.getElementById(`${panelId}-panel`);
         if (!panelElement) {
-            console.log('Panel element not found:', panelId);
+
             continue;
         }
         
         const scheduleItemsContainer = panelElement.querySelector('.schedule-items');
         if (!scheduleItemsContainer) {
-            console.log('Schedule items container not found for panel:', panelId);
+
             continue;
         }
         
         // Get all hour rows
         const hourRows = scheduleItemsContainer.querySelectorAll('.hour-row');
-        console.log('Found', hourRows.length, 'hour rows for panel:', panelId);
+
         
         // Make sure hourlyAssignments for this panel exists
         if (!hourlyAssignments[panelId]) {
-            console.log('Creating hourlyAssignments for panel:', panelId);
+
             hourlyAssignments[panelId] = Array(24).fill(null);
         }
         
@@ -236,7 +236,7 @@ function renderSchedulePanels() {
             const nameSlot = hourRow.querySelector('.name-slot');
             
             if (!nameSlot) {
-                console.log('Name slot not found for hour:', hour);
+
                 return;
             }
             
@@ -247,7 +247,7 @@ function renderSchedulePanels() {
             // Check if there's a name assigned to this hour
             const assignedName = hourlyAssignments[panelId][hour];
             if (assignedName) {
-                console.log('Found assigned name for panel', panelId, 'hour', hour, ':', assignedName);
+
                 
                 // Add the has-name class
                 nameSlot.classList.add('has-name');
@@ -279,11 +279,11 @@ function updateEmptyScheduleMessage() {
 
 // Save data to local storage
 function saveToLocalStorage() {
-    console.log('Saving to localStorage');
-    console.log('Names:', names);
-    console.log('Assignments:', assignments);
-    console.log('HourlyAssignments:', hourlyAssignments);
-    console.log('CustomPanelCounter:', customPanelCounter);
+
+
+
+
+
     
     // Save panel names
     const panelNames = {};
@@ -293,7 +293,7 @@ function saveToLocalStorage() {
             panelNames[panelId] = titleElement.textContent;
         }
     });
-    console.log('Panel names:', panelNames);
+
     
     localStorage.setItem('scheduleAppNames', JSON.stringify(names));
     localStorage.setItem('scheduleAppAssignments', JSON.stringify(assignments));
@@ -304,7 +304,7 @@ function saveToLocalStorage() {
 
 // Clean up invalid panel entries in hourlyAssignments
 function cleanupHourlyAssignments() {
-console.log('Cleaning up hourlyAssignments');
+
 
 // Get all valid panel IDs (panels that exist in the DOM)
 const validPanelIds = [];
@@ -315,7 +315,7 @@ document.querySelectorAll('.schedule-panel').forEach(panel => {
     }
 });
 
-console.log('Valid panel IDs:', validPanelIds);
+
 
 // Create a new hourlyAssignments object with only valid panels
 const cleanedHourlyAssignments = {};
@@ -333,11 +333,11 @@ validPanelIds.forEach(panelId => {
 // Check for any panels with incorrect IDs (without 'panel-' prefix)
 for (const key in hourlyAssignments) {
     if (!key.startsWith('panel-') && hourlyAssignments[key]) {
-        console.log('Found invalid panel ID:', key);
+
         // If there's a panel with just 'panel' as ID, migrate its data to a proper panel ID
         if (validPanelIds.length > 0) {
             const firstValidPanel = validPanelIds[0];
-            console.log('Migrating data from invalid panel to:', firstValidPanel);
+
 
             // Merge the data, keeping the valid panel's data if there's a conflict
             for (let i = 0; i < 24; i++) {
@@ -350,12 +350,12 @@ for (const key in hourlyAssignments) {
 }
 
 hourlyAssignments = cleanedHourlyAssignments;
-console.log('Cleaned hourlyAssignments:', hourlyAssignments);
+
 }
 
 // Load data from local storage
 function loadFromLocalStorage() {
-    console.log('Loading from localStorage');
+
     
     const savedNames = localStorage.getItem('scheduleAppNames');
     const savedAssignments = localStorage.getItem('scheduleAppAssignments');
@@ -365,29 +365,29 @@ function loadFromLocalStorage() {
     
     if (savedNames) {
         names = JSON.parse(savedNames);
-        console.log('Loaded names:', names);
+
     }
     
     if (savedAssignments) {
         assignments = JSON.parse(savedAssignments);
-        console.log('Loaded assignments:', assignments);
+
     }
     
     if (savedHourlyAssignments) {
         hourlyAssignments = JSON.parse(savedHourlyAssignments);
-        console.log('Loaded hourlyAssignments:', hourlyAssignments);
+
     }
     
     if (savedCounter) {
         customPanelCounter = parseInt(savedCounter, 10);
-        console.log('Loaded customPanelCounter:', customPanelCounter);
+
     }
     
     // Load panel names
     let panelNames = {};
     if (savedPanelNames) {
         panelNames = JSON.parse(savedPanelNames);
-        console.log('Loaded panel names:', panelNames);
+
     }
     
     // Recreate any saved panels that don't exist in the DOM
@@ -396,29 +396,29 @@ function loadFromLocalStorage() {
 
 // Recreate saved panels from localStorage
 function recreateSavedPanels(panelNames = {}) {
-    console.log('Recreating saved panels');
+
     
     // Get all panel IDs from hourlyAssignments
     const panelIds = Object.keys(hourlyAssignments);
-    console.log('Panel IDs to recreate:', panelIds);
+
     
     // For each panel ID, check if it exists in the DOM
     panelIds.forEach(panelId => {
         // Skip if the panel already exists
         if (document.getElementById(`${panelId}-panel`)) {
-            console.log('Panel already exists:', panelId);
+
             return;
         }
         
         // Create the panel
-        console.log('Creating saved panel:', panelId);
+
         createSavedPanel(panelId, panelNames[panelId]);
     });
 }
 
 // Create a panel from saved data
 function createSavedPanel(panelId, customName) {
-    console.log('Creating saved panel:', panelId, 'with custom name:', customName);
+
     
     const scheduleContainer = document.querySelector('.schedule-container');
     
@@ -520,9 +520,9 @@ function createSavedPanel(panelId, customName) {
 }
     
 function addSchedulePanel() {
-    console.log('addSchedulePanel function called');
+
     const panelName = prompt('Enter a name for the new schedule panel:');
-    console.log('Panel name:', panelName);
+
     if (!panelName || panelName.trim() === '') {
         return;
     }
@@ -723,26 +723,32 @@ function deleteSchedulePanel(panelId) {
 
 // Process a drop action (shared between mouse and touch)
 function processDrop(name, sourceContainer, targetContainer) {
-    console.log('Processing drop:', name, 'from', sourceContainer, 'to', targetContainer);
-    console.log('Current hourlyAssignments before drop:', JSON.stringify(hourlyAssignments));
+
+
     
     // Don't do anything if dropped in the same container
     if (sourceContainer === targetContainer) {
-        console.log('Same container, ignoring drop');
+
         return;
     }
     
     // If dropped in trash, delete the name completely
     if (targetContainer === 'trash') {
-        console.log('Dropping in trash');
+
+
+
         // Remove from source container
         if (sourceContainer === 'names') {
             names = names.filter(n => n !== name);
         } else if (sourceContainer.includes('-')) {
             // This is an hourly slot
-            const [panelId, hour] = sourceContainer.split('-');
-            if (hourlyAssignments[panelId]) {
-                hourlyAssignments[panelId][hour] = null;
+            const sourceParts = sourceContainer.split('-');
+            // Ensure we handle panel IDs correctly, even if they contain hyphens
+            const sourceHour = sourceParts.pop();
+            const sourcePanelId = sourceParts.join('-');
+
+            if (hourlyAssignments[sourcePanelId]) {
+                hourlyAssignments[sourcePanelId][sourceHour] = null;
             }
         } else {
             if (assignments[sourceContainer]) {
@@ -761,25 +767,25 @@ function processDrop(name, sourceContainer, targetContainer) {
     
     // Check if this is an hourly slot drop
     if (targetContainer.includes('-')) {
-        console.log('Dropping in hourly slot');
+
         const parts = targetContainer.split('-');
         // Ensure we handle panel IDs correctly, even if they contain hyphens
         const hour = parts.pop();
         const panelId = parts.join('-');
-        console.log('Target panel ID:', panelId, 'hour:', hour);
+
         
         // Make a deep copy of the hourlyAssignments to avoid reference issues
         const hourlyAssignmentsCopy = JSON.parse(JSON.stringify(hourlyAssignments));
         
         // Make sure hourlyAssignments for this panel exists
         if (!hourlyAssignmentsCopy[panelId]) {
-            console.log('Creating hourlyAssignments for panel:', panelId);
+
             hourlyAssignmentsCopy[panelId] = Array(24).fill(null);
         }
         
         // If there's already a name in this hour slot, move it back to the names list
         if (hourlyAssignmentsCopy[panelId][hour]) {
-            console.log('Slot already has name:', hourlyAssignmentsCopy[panelId][hour], 'moving to names list');
+
             names.push(hourlyAssignmentsCopy[panelId][hour]);
         }
         
@@ -802,13 +808,13 @@ function processDrop(name, sourceContainer, targetContainer) {
         }
         
         // Assign to the hour slot
-        console.log('Assigning', name, 'to', panelId, 'hour', hour);
+
         hourlyAssignmentsCopy[panelId][hour] = name;
         
         // Update the hourlyAssignments with the modified copy
         hourlyAssignments = hourlyAssignmentsCopy;
         
-        console.log('Updated hourlyAssignments after drop:', JSON.stringify(hourlyAssignments));
+
         
         // Save to local storage
         saveToLocalStorage();
@@ -820,7 +826,7 @@ function processDrop(name, sourceContainer, targetContainer) {
     }
     
     // Standard container drop (not hourly)
-    console.log('Standard container drop');
+
     
     // Make a deep copy of the assignments to avoid reference issues
     const assignmentsCopy = JSON.parse(JSON.stringify(assignments));
@@ -859,7 +865,7 @@ function processDrop(name, sourceContainer, targetContainer) {
     assignments = assignmentsCopy;
     hourlyAssignments = hourlyAssignmentsCopy;
     
-    console.log('Updated assignments after drop:', JSON.stringify(assignments));
+
     
     // Save to local storage
     saveToLocalStorage();
@@ -871,10 +877,10 @@ function processDrop(name, sourceContainer, targetContainer) {
 
 // Set up drag and drop functionality
 function setupDragAndDrop() {
-    console.log('Setting up drag and drop...');
+
     // Update the list of drop containers
     allDropContainers = document.querySelectorAll('[data-container]');
-    console.log('Drop containers:', allDropContainers.length);
+
     
     // Add event listeners for drag and drop
     allDropContainers.forEach(container => {
@@ -906,12 +912,27 @@ function handleDrop(e) {
     e.preventDefault();
     this.classList.remove('drag-over');
     
-    console.log('Drop event on container:', this.dataset.container);
-    console.log('Dragged name:', draggedName);
-    console.log('Source container:', dragSourceContainer);
+
+
+
+    
+    // Get the target container ID
+    let targetContainer = this.dataset.container;
+    
+    // Special handling for the trash panel
+    if (this.id === 'trash-panel' || this.closest('#trash-panel')) {
+        targetContainer = 'trash';
+
+    }
+    
+    // Ignore drops directly on schedule panels (only allow drops on hour rows)
+    if (this.classList.contains('schedule-panel')) {
+
+        return;
+    }
     
     if (draggedName) {
-        processDrop(draggedName, dragSourceContainer, this.dataset.container);
+        processDrop(draggedName, dragSourceContainer, targetContainer);
         draggedName = null;
         dragSourceContainer = null;
     }
@@ -919,10 +940,10 @@ function handleDrop(e) {
 
 // Handle drag start event
 function handleDragStart(e) {
-    console.log('Drag start on element:', this);
+
     draggedName = this.dataset.name;
     dragSourceContainer = this.dataset.container;
-    console.log('Dragging name:', draggedName, 'from container:', dragSourceContainer);
+
     
     e.dataTransfer.setData('text/plain', draggedName);
     e.dataTransfer.effectAllowed = 'move';
@@ -933,7 +954,7 @@ function handleDragStart(e) {
     // Remove dragging class after drag ends
     this.addEventListener('dragend', function() {
         this.classList.remove('dragging');
-        console.log('Drag ended');
+
     }, { once: true });
 }
 
@@ -1026,8 +1047,21 @@ function positionClone(clone, x, y) {
 function getDropTargetAtPoint(x, y) {
     const elements = document.elementsFromPoint(x, y);
     
-    // Find the first element with a data-container attribute
+    // Check for trash panel first (prioritize it)
     for (const element of elements) {
+        if (element.dataset.container === 'trash' || 
+            (element.parentElement && element.parentElement.dataset.container === 'trash')) {
+            return document.getElementById('trash-panel');
+        }
+    }
+    
+    // Find the first valid drop target element
+    for (const element of elements) {
+        // Skip schedule panel containers - we only want to drop on hour rows or other valid containers
+        if (element.classList.contains('schedule-panel')) {
+            continue;
+        }
+        
         if (element.dataset.container) {
             return element;
         }
@@ -1035,6 +1069,11 @@ function getDropTargetAtPoint(x, y) {
         // Check if any parent has a data-container attribute
         let parent = element.parentElement;
         while (parent) {
+            // Skip schedule panel containers
+            if (parent.classList.contains('schedule-panel')) {
+                break;
+            }
+            
             if (parent.dataset.container) {
                 return parent;
             }
