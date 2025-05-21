@@ -7,15 +7,26 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="name-input-container">
+        <input type="text" id="name-input" placeholder="Enter a name...">
+        <button id="add-name-btn">Add</button>
+    </div>
+    
     <div class="app-container">
         <div class="main-content">
-            <div class="add-name-form">
-                <input type="text" id="name-input" placeholder="Enter a name...">
-                <button id="add-name-btn">Add</button>
-            </div>
             <div id="names-list-container" class="names-list-container" data-container="names">
                 <!-- Name panels will be added here dynamically -->
                 <div class="empty-message">No names added yet</div>
+            </div>
+            
+            <div id="trash-panel" class="trash-panel" data-container="trash">
+                <div class="trash-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="none" d="M0 0h24v24H0z"/>
+                        <path d="M7 4V2h10v2h5v2h-2v15a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6H2V4h5zM6 6v14h12V6H6zm3 3h2v8H9V9zm4 0h2v8h-2V9z" fill="currentColor"/>
+                    </svg>
+                </div>
+                <p>Drop here to delete</p>
             </div>
         </div>
         

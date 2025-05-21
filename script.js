@@ -4,6 +4,7 @@ const addNameBtn = document.getElementById('add-name-btn');
 const namesListContainer = document.getElementById('names-list-container');
 const emptyMessage = document.querySelector('.empty-message');
 const scheduleItems = document.querySelectorAll('.schedule-items');
+const trashPanel = document.getElementById('trash-panel');
 const allDropContainers = document.querySelectorAll('[data-container]');
 
 // State
@@ -146,16 +147,7 @@ function createNamePanel(name, container, parentElement) {
     const heading = document.createElement('h3');
     heading.textContent = name;
     
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
-    removeBtn.innerHTML = '&times;';
-    removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent drag events from firing
-        removeName(name, container);
-    });
-    
     panel.appendChild(heading);
-    panel.appendChild(removeBtn);
     
     parentElement.appendChild(panel);
 }
@@ -233,6 +225,24 @@ function handleDrop(e) {
     
     // Don't do anything if dropped in the same container
     if (sourceContainer === targetContainer) {
+        return;
+    }
+    
+    // If dropped in trash, delete the name completely
+    if (targetContainer === 'trash') {
+        // Remove from source container
+        if (sourceContainer === 'names') {
+            names = names.filter(n => n !== name);
+        } else {
+            assignments[sourceContainer] = assignments[sourceContainer].filter(n => n !== name);
+        }
+        
+        // Save to local storage
+        saveToLocalStorage();
+        
+        // Update UI
+        renderNamePanels();
+        renderSchedulePanels();
         return;
     }
     
