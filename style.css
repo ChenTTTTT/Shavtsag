@@ -35,6 +35,53 @@ body {
     width: 100%;
 }
 
+.schedule-items {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 5px;
+    overflow-y: auto;
+    max-height: 400px;
+}
+
+/* Hour row styles */
+.hour-row {
+    display: flex;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #eaeaea;
+}
+
+.hour-label {
+    width: 60px;
+    font-size: 12px;
+    color: #666;
+    flex-shrink: 0;
+}
+
+.name-slot {
+    flex: 1;
+    min-height: 30px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f9f9f9;
+    transition: background-color 0.2s;
+}
+
+.name-slot.has-name {
+    border: none;
+    background-color: transparent;
+}
+
+.name-slot .name-panel {
+    margin: 0;
+    width: 100%;
+}
+
 /* Names container */
 .names-container {
     display: flex;
@@ -330,19 +377,16 @@ body {
 
 /* Schedule panel */
 .schedule-panel {
-    background-color: #f5f5f5;
+    background-color: #f9f9f9;
     border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: 10px;
+    padding: 10px;
+    min-width: 250px;
+    max-width: 350px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    min-height: 0; /* Allow panel to shrink */
-    height: auto; /* Allow panel to grow */
-    min-width: 0; /* Prevent horizontal overflow */
-    transition: none; /* Disable transitions to prevent resizing animations */
-    flex: 1 0 calc(50% - 20px); /* Flex basis of roughly half width minus gap */
-    max-width: calc(50% - 10px); /* Prevent panels from growing too wide */
-    min-width: 250px; /* Ensure panels don't get too narrow */
     padding: 15px;
 }
 
@@ -359,14 +403,53 @@ body {
     padding: 15px;
     flex: 1;
     display: flex;
-    flex-wrap: wrap;
-    align-content: flex-start;
-    gap: 10px;
+    flex-direction: column;
+    gap: 5px;
     min-height: 100px;
     height: auto; /* Allow content to determine height */
-    overflow: visible; /* Allow content to expand the container */
+    overflow-y: auto; /* Allow scrolling for many hours */
     width: 100%;
     transition: none; /* Disable transitions to prevent resizing animations */
+}
+
+/* Hour row */
+.hour-row {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    border-bottom: 1px solid #eee;
+    width: 100%;
+}
+
+.hour-row:last-child {
+    border-bottom: none;
+}
+
+/* Hour label */
+.hour-label {
+    width: 60px;
+    min-width: 60px;
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: 500;
+    padding-right: 10px;
+}
+
+/* Name slot */
+.name-slot {
+    flex: 1;
+    min-height: 40px;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+    border: 1px dashed #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.name-slot.has-name {
+    border: none;
+    background-color: transparent;
 }
 
 /* Drag and drop styles */

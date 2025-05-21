@@ -23,39 +23,58 @@ let touchStartedOnNamePanel = false;
 
 // State
 let names = [];
-let assignments = {};
-
-// Custom panel counter for generating unique IDs
+let assignments = {
+    duty: [],
+    standby: [],
+    rest: [],
+    home: []
+};
+let hourlyAssignments = {
+    duty: Array(24).fill(null),
+    standby: Array(24).fill(null),
+    rest: Array(24).fill(null),
+    home: Array(24).fill(null)
+};
 let customPanelCounter = 1;
 
 // Initialize app
 function init() {
-    // Load data from local storage if available
-    loadFromLocalStorage();
+    // Get DOM elements
+    nameInput = document.getElementById('name-input');
+    namesListContainer = document.getElementById('names-list-container');
+    scheduleContainer = document.querySelector('.schedule-container');
+    addScheduleBtn = document.getElementById('add-schedule-btn');
+    emptyMessage = document.querySelector('.empty-schedule-message');
     
-    // Check if we have any schedule panels
-    updateEmptyScheduleMessage();
-    
-    // Render all panels
-    renderNamePanels();
-    renderSchedulePanels();
-
-    // Add event listeners
-    addNameBtn.addEventListener('click', addName);
-    nameInput.addEventListener('keypress', (e) => {
+    // Set up event listeners
+    nameInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             addName();
         }
     });
+    
+    document.getElementById('add-name-btn').addEventListener('click', addName);
+    addScheduleBtn.addEventListener('click', addSchedulePanel);
+    
+    // Initialize default panels if they don't exist in hourlyAssignments
+    if (!hourlyAssignments.duty) hourlyAssignments.duty = Array(24).fill(null);
+    if (!hourlyAssignments.standby) hourlyAssignments.standby = Array(24).fill(null);
+    if (!hourlyAssignments.rest) hourlyAssignments.rest = Array(24).fill(null);
+    if (!hourlyAssignments.home) hourlyAssignments.home = Array(24).fill(null);
+    
+    // Load data from local storage
+    loadFromLocalStorage();
+    
+    // Render UI
+    renderNamePanels();
+    renderSchedulePanels();
+    updateEmptyScheduleMessage();
     
     // Set up drag and drop
     setupDragAndDrop();
     
     // Set up horizontal swipe scrolling for names list
     setupNamesListScrolling();
-    
-    // Add event listener for adding new schedule panels
-    addScheduleBtn.addEventListener('click', addSchedulePanel);
     
     // Add event listeners for deleting schedule panels
     setupDeletePanelListeners();
@@ -71,12 +90,37 @@ function addName() {
         return;
     }
     
-    // Check for duplicates in the names list and all schedule panels
-    if (names.includes(name) || 
-        assignments.duty.includes(name) || 
-        assignments.standby.includes(name) || 
-        assignments.rest.includes(name) || 
-        assignments.home.includes(name)) {
+    // Check for duplicates in the names list
+    if (names.includes(name)) {
+        alert('This name already exists');
+        return;
+    }
+    
+    // Check for duplicates in all schedule panels
+    let nameExists = false;
+    
+    // Check in regular assignments
+    for (const panelId in assignments) {
+        if (assignments[panelId].includes(name)) {
+            nameExists = true;
+            break;
+        }
+    }
+    
+    // Check in hourly assignments
+    if (!nameExists) {
+        for (const panelId in hourlyAssignments) {
+            for (let hour = 0; hour < 24; hour++) {
+                if (hourlyAssignments[panelId][hour] === name) {
+                    nameExists = true;
+                    break;
+                }
+            }
+            if (nameExists) break;
+        }
+    }
+    
+    if (nameExists) {
         alert('This name already exists');
         return;
     }
@@ -116,44 +160,56 @@ function removeName(name, container) {
 
 
 
-
 // Render the name panels in the left sidebar
 function renderNamePanels() {
-    // Clear existing panels except empty message
-    Array.from(namesListContainer.children).forEach(child => {
-        if (!child.classList.contains('empty-message')) {
-            namesListContainer.removeChild(child);
-        }
-    });
+    // Clear existing panels
+    namesListContainer.innerHTML = '';
     
-    // Show/hide empty message
+    // Add empty message if there are no names
     if (names.length === 0) {
-        emptyMessage.style.display = 'block';
-    } else {
-        emptyMessage.style.display = 'none';
-        
-        // Create panels for each name
-        names.forEach(name => {
-            createNamePanel(name, 'names', namesListContainer);
-        });
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'empty-message';
+        emptyMessage.textContent = 'No names added yet';
+        namesListContainer.appendChild(emptyMessage);
+        return;
     }
+    
+    // Create panels for each name
+    names.forEach(name => {
+        createNamePanel(name, 'names', namesListContainer);
+    });
 }
 
 // Render all schedule panels
 function renderSchedulePanels() {
-    // Clear and render each schedule panel
-    for (const [container, namesList] of Object.entries(assignments)) {
-        const scheduleItemsContainer = document.querySelector(`#${container}-panel .schedule-items`);
+    // Render each schedule panel
+    for (const panelId of Object.keys(hourlyAssignments)) {
+        const scheduleItemsContainer = document.querySelector(`#${panelId}-panel .schedule-items`);
         
         // Skip if the container doesn't exist
         if (!scheduleItemsContainer) continue;
         
-        // Clear existing panels
-        scheduleItemsContainer.innerHTML = '';
+        // Get all hour rows
+        const hourRows = scheduleItemsContainer.querySelectorAll('.hour-row');
         
-        // Create panels for each name
-        namesList.forEach(name => {
-            createNamePanel(name, container, scheduleItemsContainer);
+        // For each hour, check if there's an assignment and render it
+        hourRows.forEach(hourRow => {
+            const hour = hourRow.dataset.hour;
+            const nameSlot = hourRow.querySelector('.name-slot');
+            
+            // Clear the name slot
+            nameSlot.innerHTML = '';
+            nameSlot.classList.remove('has-name');
+            
+            // Check if there's a name assigned to this hour
+            const assignedName = hourlyAssignments[panelId][hour];
+            if (assignedName) {
+                // Add the has-name class
+                nameSlot.classList.add('has-name');
+                
+                // Create a name panel
+                createNamePanel(assignedName, `${panelId}-${hour}`, nameSlot);
+            }
         });
     }
     
@@ -191,12 +247,16 @@ function createNamePanel(name, container, parentElement) {
 function saveToLocalStorage() {
     localStorage.setItem('scheduleAppNames', JSON.stringify(names));
     localStorage.setItem('scheduleAppAssignments', JSON.stringify(assignments));
+    localStorage.setItem('scheduleAppHourlyAssignments', JSON.stringify(hourlyAssignments));
+    localStorage.setItem('scheduleAppCustomPanelCounter', customPanelCounter.toString());
 }
 
 // Load data from local storage
 function loadFromLocalStorage() {
     const savedNames = localStorage.getItem('scheduleAppNames');
     const savedAssignments = localStorage.getItem('scheduleAppAssignments');
+    const savedHourlyAssignments = localStorage.getItem('scheduleAppHourlyAssignments');
+    const savedCounter = localStorage.getItem('scheduleAppCustomPanelCounter');
     
     if (savedNames) {
         names = JSON.parse(savedNames);
@@ -205,6 +265,17 @@ function loadFromLocalStorage() {
     if (savedAssignments) {
         assignments = JSON.parse(savedAssignments);
     }
+    
+    if (savedHourlyAssignments) {
+        hourlyAssignments = JSON.parse(savedHourlyAssignments);
+    }
+    
+    if (savedCounter) {
+        customPanelCounter = parseInt(savedCounter, 10);
+    }
+    
+    // Recreate any saved panels that don't exist in the DOM
+    recreateSavedPanels();
 }
 
 // Set up drag and drop functionality
@@ -462,6 +533,10 @@ function processDrop(name, sourceContainer, targetContainer) {
         // Remove from source container
         if (sourceContainer === 'names') {
             names = names.filter(n => n !== name);
+        } else if (sourceContainer.includes('-')) {
+            // This is an hourly slot
+            const [panelId, hour] = sourceContainer.split('-');
+            hourlyAssignments[panelId][hour] = null;
         } else {
             assignments[sourceContainer] = assignments[sourceContainer].filter(n => n !== name);
         }
@@ -475,9 +550,47 @@ function processDrop(name, sourceContainer, targetContainer) {
         return;
     }
     
+    // Check if this is an hourly slot drop
+    if (targetContainer.includes('-')) {
+        const [panelId, hour] = targetContainer.split('-');
+        
+        // If there's already a name in this hour slot, move it back to the names list
+        if (hourlyAssignments[panelId][hour]) {
+            names.push(hourlyAssignments[panelId][hour]);
+        }
+        
+        // Remove from source container
+        if (sourceContainer === 'names') {
+            names = names.filter(n => n !== name);
+        } else if (sourceContainer.includes('-')) {
+            // This is an hourly slot
+            const [sourcePanelId, sourceHour] = sourceContainer.split('-');
+            hourlyAssignments[sourcePanelId][sourceHour] = null;
+        } else {
+            assignments[sourceContainer] = assignments[sourceContainer].filter(n => n !== name);
+        }
+        
+        // Assign to the hour slot
+        hourlyAssignments[panelId][hour] = name;
+        
+        // Save to local storage
+        saveToLocalStorage();
+        
+        // Update UI
+        renderNamePanels();
+        renderSchedulePanels();
+        return;
+    }
+    
+    // Standard container drop (not hourly)
+    
     // Remove from source container
     if (sourceContainer === 'names') {
         names = names.filter(n => n !== name);
+    } else if (sourceContainer.includes('-')) {
+        // This is an hourly slot
+        const [panelId, hour] = sourceContainer.split('-');
+        hourlyAssignments[panelId][hour] = null;
     } else {
         assignments[sourceContainer] = assignments[sourceContainer].filter(n => n !== name);
     }
@@ -622,23 +735,18 @@ function handleNamesListWheel(e) {
 
 // Add a new schedule panel
 function addSchedulePanel() {
-    // Prompt the user for a panel name
     const panelName = prompt('Enter a name for the new schedule panel:');
-    
-    // If the user cancels or enters an empty name, don't create a panel
     if (!panelName || panelName.trim() === '') {
         return;
     }
     
-    // Check if the panel name already exists
     if (isPanelNameTaken(panelName.trim())) {
         alert('A panel with this name already exists. Please choose a different name.');
         return;
     }
     
-    // Generate a unique ID for the new panel
-    const panelId = `panel-${customPanelCounter}`;
-    customPanelCounter++;
+    // Generate a unique ID for the panel
+    const panelId = `panel-${customPanelCounter++}`;
     
     // Create a new panel element
     const panelElement = document.createElement('div');
@@ -646,13 +754,12 @@ function addSchedulePanel() {
     panelElement.id = `${panelId}-panel`;
     panelElement.dataset.container = panelId;
     
-    // Create panel header with title, edit and delete buttons
+    // Create panel header with title and delete button
     const panelHeader = document.createElement('div');
     panelHeader.className = 'panel-header';
     
     const panelTitle = document.createElement('h2');
     panelTitle.textContent = panelName.trim();
-    panelTitle.dataset.panelName = panelName.trim();
     
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'panel-buttons';
@@ -681,6 +788,30 @@ function addSchedulePanel() {
     const scheduleItemsContainer = document.createElement('div');
     scheduleItemsContainer.className = 'schedule-items';
     
+    // Create hourly rows (from 12 AM to 11 PM)
+    for (let hour = 0; hour < 24; hour++) {
+        const hourRow = document.createElement('div');
+        hourRow.className = 'hour-row';
+        hourRow.dataset.hour = hour;
+        hourRow.dataset.container = `${panelId}-${hour}`;
+        
+        // Create the hour label
+        const hourLabel = document.createElement('div');
+        hourLabel.className = 'hour-label';
+        hourLabel.textContent = formatHour(hour);
+        
+        // Create the slot for the name
+        const nameSlot = document.createElement('div');
+        nameSlot.className = 'name-slot';
+        
+        // Add the elements to the row
+        hourRow.appendChild(hourLabel);
+        hourRow.appendChild(nameSlot);
+        
+        // Add the row to the schedule items container
+        scheduleItemsContainer.appendChild(hourRow);
+    }
+    
     // Assemble the panel
     buttonContainer.appendChild(editButton);
     buttonContainer.appendChild(deleteButton);
@@ -692,18 +823,18 @@ function addSchedulePanel() {
     // Add the panel to the schedule container
     scheduleContainer.appendChild(panelElement);
     
-    // Initialize the new panel's assignments array
+    // Initialize the panel's assignments
     assignments[panelId] = [];
     
-    // Update drop containers
-    allDropContainers = document.querySelectorAll('[data-container]');
-    
-    // Set up drag and drop for the new panel
-    setupDragAndDrop();
+    // Initialize the panel's hourly assignments
+    hourlyAssignments[panelId] = Array(24).fill(null);
     
     // Add event listeners for the buttons
     deleteButton.addEventListener('click', () => deleteSchedulePanel(panelId));
     editButton.addEventListener('click', () => editPanelName(panelId));
+    
+    // Update drop containers
+    allDropContainers = document.querySelectorAll('[data-container]');
     
     // Update the empty schedule message
     updateEmptyScheduleMessage();
@@ -721,6 +852,21 @@ function deleteSchedulePanel(panelId) {
         
         // Clear the panel's assignments
         assignments[panelId] = [];
+    }
+    
+    // Move all hourly assignments back to the names list
+    if (hourlyAssignments[panelId]) {
+        // For each hour, check if there's a name assigned
+        for (let hour = 0; hour < 24; hour++) {
+            const assignedName = hourlyAssignments[panelId][hour];
+            if (assignedName) {
+                // Add the name back to the names list
+                names.push(assignedName);
+            }
+        }
+        
+        // Remove the panel's hourly assignments
+        delete hourlyAssignments[panelId];
     }
     
     // Remove the panel from the DOM
@@ -750,8 +896,10 @@ function setupDeletePanelListeners() {
         const panelId = button.dataset.panel;
         button.addEventListener('click', () => deleteSchedulePanel(panelId));
     });
-    
-    // Set up edit button listeners
+}
+
+// Set up event listeners for edit panel buttons
+function setupEditPanelListeners() {
     document.querySelectorAll('.edit-panel-btn').forEach(button => {
         const panelId = button.dataset.panel;
         button.addEventListener('click', () => editPanelName(panelId));
@@ -763,19 +911,26 @@ function updateEmptyScheduleMessage() {
     const emptyMessage = document.querySelector('.empty-schedule-message');
     if (!emptyMessage) return;
     
-    // Check if we have any schedule panels
-    const panelCount = Object.keys(assignments).length;
+    // Check if there are any schedule panels
+    const hasPanels = document.querySelectorAll('.schedule-panel').length > 0;
     
-    if (panelCount === 0) {
-        // Show the empty message
-        emptyMessage.style.display = 'block';
-    } else {
-        // Hide the empty message
+    // Show or hide the empty message
+    if (hasPanels) {
         emptyMessage.style.display = 'none';
+    } else {
+        emptyMessage.style.display = 'block';
     }
 }
 
-// Check if a panel name is already taken
+// Format hour for display (0-23 to 12 AM/PM format)
+function formatHour(hour) {
+    if (hour === 0) return '12 AM';
+    if (hour === 12) return '12 PM';
+    if (hour < 12) return `${hour} AM`;
+    return `${hour - 12} PM`;
+}
+
+// Helper function to check if a panel name is already taken
 function isPanelNameTaken(name) {
     // Get all panel titles
     const panelTitles = Array.from(document.querySelectorAll('.panel-header h2'));
@@ -821,6 +976,127 @@ function editPanelName(panelId) {
     
     // Save to local storage
     saveToLocalStorage();
+}
+
+// Format hour to 12-hour format with AM/PM
+function formatHour(hour) {
+    if (hour === 0) {
+        return '12 AM';
+    } else if (hour < 12) {
+        return `${hour} AM`;
+    } else if (hour === 12) {
+        return '12 PM';
+    } else {
+        return `${hour - 12} PM`;
+    }
+}
+
+// Recreate saved panels from localStorage
+function recreateSavedPanels() {
+    // Get all panel IDs from hourlyAssignments
+    const panelIds = Object.keys(hourlyAssignments);
+    
+    // For each panel ID, check if it exists in the DOM
+    panelIds.forEach(panelId => {
+        // Skip if the panel already exists
+        if (document.getElementById(`${panelId}-panel`)) return;
+        
+        // Create the panel
+        createSavedPanel(panelId);
+    });
+}
+
+// Create a panel from saved data
+function createSavedPanel(panelId) {
+    // Extract panel number for the title (if it's a custom panel)
+    let panelName = panelId;
+    if (panelId.startsWith('panel-')) {
+        const panelNumber = panelId.split('-')[1];
+        panelName = `Panel ${panelNumber}`;
+    }
+    
+    // Create a new panel element
+    const panelElement = document.createElement('div');
+    panelElement.className = 'schedule-panel';
+    panelElement.id = `${panelId}-panel`;
+    panelElement.dataset.container = panelId;
+    
+    // Create panel header with title, edit and delete buttons
+    const panelHeader = document.createElement('div');
+    panelHeader.className = 'panel-header';
+    
+    const panelTitle = document.createElement('h2');
+    panelTitle.textContent = panelName;
+    panelTitle.dataset.panelName = panelName;
+    
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'panel-buttons';
+    
+    const editButton = document.createElement('button');
+    editButton.className = 'edit-panel-btn';
+    editButton.dataset.panel = panelId;
+    editButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="none" d="M0 0h24v24H0z"/>
+            <path d="M15.728 9.686l-1.414-1.414L5 17.586V19h1.414l9.314-9.314zm1.414-1.414l1.414-1.414-1.414-1.414-1.414 1.414 1.414 1.414zM7.242 21H3v-4.243L16.435 3.322a1 1 0 0 1 1.414 0l2.829 2.829a1 1 0 0 1 0 1.414L7.243 21h-.001z" fill="currentColor"/>
+        </svg>
+    `;
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.className = 'delete-panel-btn';
+    deleteButton.dataset.panel = panelId;
+    deleteButton.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">
+            <path fill="none" d="M0 0h24v24H0z"/>
+            <path d="M12 10.586l4.95-4.95 1.414 1.414-4.95 4.95 4.95 4.95-1.414 1.414-4.95-4.95-4.95 4.95-1.414-1.414 4.95-4.95-4.95-4.95L7.05 5.636z" fill="currentColor"/>
+        </svg>
+    `;
+    
+    // Create the container for schedule items
+    const scheduleItemsContainer = document.createElement('div');
+    scheduleItemsContainer.className = 'schedule-items';
+    
+    // Create hourly rows (from 12 AM to 11 PM)
+    for (let hour = 0; hour < 24; hour++) {
+        const hourRow = document.createElement('div');
+        hourRow.className = 'hour-row';
+        hourRow.dataset.hour = hour;
+        hourRow.dataset.container = `${panelId}-${hour}`;
+        
+        // Create the hour label
+        const hourLabel = document.createElement('div');
+        hourLabel.className = 'hour-label';
+        hourLabel.textContent = formatHour(hour);
+        
+        // Create the slot for the name
+        const nameSlot = document.createElement('div');
+        nameSlot.className = 'name-slot';
+        
+        // Add the elements to the row
+        hourRow.appendChild(hourLabel);
+        hourRow.appendChild(nameSlot);
+        
+        // Add the row to the schedule items container
+        scheduleItemsContainer.appendChild(hourRow);
+    }
+    
+    // Assemble the panel
+    buttonContainer.appendChild(editButton);
+    buttonContainer.appendChild(deleteButton);
+    panelHeader.appendChild(panelTitle);
+    panelHeader.appendChild(buttonContainer);
+    panelElement.appendChild(panelHeader);
+    panelElement.appendChild(scheduleItemsContainer);
+    
+    // Add the panel to the schedule container
+    scheduleContainer.appendChild(panelElement);
+    
+    // Add event listeners for the buttons
+    deleteButton.addEventListener('click', () => deleteSchedulePanel(panelId));
+    editButton.addEventListener('click', () => editPanelName(panelId));
+    
+    // Update drop containers
+    allDropContainers = document.querySelectorAll('[data-container]');
 }
 
 // Initialize the app when the DOM is loaded
