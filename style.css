@@ -110,10 +110,11 @@ body {
 /* Names container */
 .names-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     background-color: #f9f9f9;
     border-bottom: 1px solid #ddd;
     padding: 10px 20px;
+    align-items: center;
 }
 
 .panel-header {
@@ -301,7 +302,7 @@ body {
     background-color: #f9f9f9;
     border: 2px dashed #ccc;
     border-radius: 8px;
-    padding: 10px;
+    padding: 10px 15px;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -309,18 +310,23 @@ body {
     height: 60px;
     color: #666;
     text-align: center;
-    margin-top: 10px;
+    margin-right: 15px;
     flex-shrink: 0;
+    min-width: 120px;
+    width: 120px;
 }
 
 .trash-icon {
-    margin-right: 10px;
     color: #666;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .trash-icon svg {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
 }
 
 .trash-panel.drag-over {
@@ -529,14 +535,13 @@ body {
     }
     
     .schedule-container {
-        height: calc(100vh - 200px); /* Account for name input and names container */
+        min-height: calc(100vh - 200px); /* Account for name input and names container */
         display: flex;
         flex-direction: row; /* Keep panels horizontally aligned */
         flex-wrap: nowrap; /* Prevent wrapping to next line */
         overflow-x: auto; /* Enable horizontal scrolling */
-        overflow-y: hidden; /* Disable vertical scrolling */
+        overflow-y: visible; /* Allow vertical content to be visible */
         padding: 10px;
-        padding-bottom: 20px; /* Add padding for the scrollbar */
         -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     }
     
@@ -566,6 +571,9 @@ body {
     
     .trash-panel {
         height: 50px;
-        padding: 5px;
+        padding: 5px 10px;
+        min-width: 80px;
+        width: 80px;
+        margin-right: 10px;
     }
 }

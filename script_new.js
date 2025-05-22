@@ -7,6 +7,38 @@ let draggedName = null;
 let dragSourceContainer = null;
 let allDropContainers;
 
+// List of 24 aesthetically pleasing lighter pastel colors for name panels
+const nameColors = [
+    '#BBD6FF', // Light Blue
+    '#FFCCCB', // Light Red
+    '#FFFFB3', // Light Yellow
+    '#C8E6C9', // Light Green
+    '#E1BEE7', // Light Purple
+    '#F8BBD0', // Light Pink
+    '#B2EBF2', // Light Cyan
+    '#DCEDC8', // Light Lime
+    '#FFE0B2', // Light Orange
+    '#D1C4E9', // Light Lavender
+    '#B3E5FC', // Light Sky Blue
+    '#CFD8DC', // Light Blue Grey
+    '#F0F4C3', // Light Lime
+    '#FFECB3', // Light Amber
+    '#D7CCC8', // Light Brown
+    '#F8BBD0', // Light Pink
+    '#B2DFDB', // Light Teal
+    '#C8E6C9', // Light Green
+    '#FFCCBC', // Light Deep Orange
+    '#D0D9FF', // Light Indigo
+    '#E1BEE7', // Light Purple
+    '#DCEDC8', // Light Lime
+    '#FFE0B2', // Light Orange
+    '#B2EBF2'  // Light Cyan
+];
+
+// Track used colors to ensure variety
+let usedColorCount = {};
+let nameColorMap = {};
+
 // Wait for the DOM to be fully loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Initialize application
@@ -136,6 +168,9 @@ function addName() {
     // Add name to array
     names.push(name);
     
+    // Assign a color to the name
+    assignColorToName(name);
+    
     // Save to local storage
     saveToLocalStorage();
     
@@ -147,6 +182,52 @@ function addName() {
     nameInput.focus();
 }
 
+// Assign a color to a name from the color list
+function assignColorToName(name) {
+    // If all colors have been used at least once, reset the counts
+    let allColorsUsed = true;
+    for (let i = 0; i < nameColors.length; i++) {
+        if (!usedColorCount[nameColors[i]] || usedColorCount[nameColors[i]] === 0) {
+            allColorsUsed = false;
+            break;
+        }
+    }
+    
+    if (allColorsUsed) {
+        // Find the least used color
+        let minUsed = Infinity;
+        let leastUsedColor = nameColors[0];
+        
+        for (let i = 0; i < nameColors.length; i++) {
+            if (usedColorCount[nameColors[i]] < minUsed) {
+                minUsed = usedColorCount[nameColors[i]];
+                leastUsedColor = nameColors[i];
+            }
+        }
+        
+        nameColorMap[name] = leastUsedColor;
+        usedColorCount[leastUsedColor] = (usedColorCount[leastUsedColor] || 0) + 1;
+    } else {
+        // Find an unused color or the least used color
+        let availableColors = [];
+        
+        for (let i = 0; i < nameColors.length; i++) {
+            if (!usedColorCount[nameColors[i]] || usedColorCount[nameColors[i]] === 0) {
+                availableColors.push(nameColors[i]);
+            }
+        }
+        
+        // If there are unused colors, pick one randomly
+        if (availableColors.length > 0) {
+            const randomIndex = Math.floor(Math.random() * availableColors.length);
+            const selectedColor = availableColors[randomIndex];
+            
+            nameColorMap[name] = selectedColor;
+            usedColorCount[selectedColor] = 1;
+        }
+    }
+}
+
 // Create a name panel element
 function createNamePanel(name, container, parentElement) {
 
@@ -156,6 +237,21 @@ function createNamePanel(name, container, parentElement) {
     panel.textContent = name;
     panel.dataset.name = name;
     panel.dataset.container = container;
+    
+    // Apply the assigned color to the name panel
+    if (nameColorMap[name]) {
+        panel.style.backgroundColor = nameColorMap[name];
+        
+        // Calculate text color based on background color brightness
+        const color = nameColorMap[name];
+        const r = parseInt(color.substr(1, 2), 16);
+        const g = parseInt(color.substr(3, 2), 16);
+        const b = parseInt(color.substr(5, 2), 16);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+        
+        // Use white text for dark backgrounds, black text for light backgrounds
+        panel.style.color = brightness > 128 ? '#000000' : '#FFFFFF';
+    }
     
     // Make draggable
     panel.draggable = true;
@@ -279,12 +375,6 @@ function updateEmptyScheduleMessage() {
 
 // Save data to local storage
 function saveToLocalStorage() {
-
-
-
-
-
-    
     // Save panel names
     const panelNames = {};
     document.querySelectorAll('.panel-header h2').forEach(titleElement => {
@@ -293,13 +383,16 @@ function saveToLocalStorage() {
             panelNames[panelId] = titleElement.textContent;
         }
     });
-
     
     localStorage.setItem('scheduleAppNames', JSON.stringify(names));
     localStorage.setItem('scheduleAppAssignments', JSON.stringify(assignments));
     localStorage.setItem('scheduleAppHourlyAssignments', JSON.stringify(hourlyAssignments));
     localStorage.setItem('scheduleAppCustomPanelCounter', customPanelCounter.toString());
     localStorage.setItem('scheduleAppPanelNames', JSON.stringify(panelNames));
+    
+    // Save color assignments
+    localStorage.setItem('scheduleAppNameColorMap', JSON.stringify(nameColorMap));
+    localStorage.setItem('scheduleAppUsedColorCount', JSON.stringify(usedColorCount));
 }
 
 // Clean up invalid panel entries in hourlyAssignments
@@ -355,40 +448,51 @@ hourlyAssignments = cleanedHourlyAssignments;
 
 // Load data from local storage
 function loadFromLocalStorage() {
-
-    
     const savedNames = localStorage.getItem('scheduleAppNames');
     const savedAssignments = localStorage.getItem('scheduleAppAssignments');
     const savedHourlyAssignments = localStorage.getItem('scheduleAppHourlyAssignments');
     const savedCounter = localStorage.getItem('scheduleAppCustomPanelCounter');
     const savedPanelNames = localStorage.getItem('scheduleAppPanelNames');
+    const savedNameColorMap = localStorage.getItem('scheduleAppNameColorMap');
+    const savedUsedColorCount = localStorage.getItem('scheduleAppUsedColorCount');
     
     if (savedNames) {
         names = JSON.parse(savedNames);
-
     }
     
     if (savedAssignments) {
         assignments = JSON.parse(savedAssignments);
-
     }
     
     if (savedHourlyAssignments) {
         hourlyAssignments = JSON.parse(savedHourlyAssignments);
-
     }
     
     if (savedCounter) {
         customPanelCounter = parseInt(savedCounter, 10);
-
     }
     
     // Load panel names
     let panelNames = {};
     if (savedPanelNames) {
         panelNames = JSON.parse(savedPanelNames);
-
     }
+    
+    // Load color assignments
+    if (savedNameColorMap) {
+        nameColorMap = JSON.parse(savedNameColorMap);
+    }
+    
+    if (savedUsedColorCount) {
+        usedColorCount = JSON.parse(savedUsedColorCount);
+    }
+    
+    // For any names without colors, assign them colors
+    names.forEach(name => {
+        if (!nameColorMap[name]) {
+            assignColorToName(name);
+        }
+    });
     
     // Recreate any saved panels that don't exist in the DOM
     recreateSavedPanels(panelNames);
@@ -723,22 +827,34 @@ function deleteSchedulePanel(panelId) {
 
 // Process a drop action (shared between mouse and touch)
 function processDrop(name, sourceContainer, targetContainer) {
-
-
-    
     // Don't do anything if dropped in the same container
     if (sourceContainer === targetContainer) {
-
         return;
+    }
+    
+    // Don't allow dropping any name panels into the names list panel
+    // Names can only be added to the names list via the add name button
+    if (targetContainer === 'names') {
+        return;
+    }
+    
+    // Check if we're dropping onto a slot that already has the same name
+    if (targetContainer.includes('-')) {
+        const parts = targetContainer.split('-');
+        const hour = parts.pop();
+        const panelId = parts.join('-');
+        
+        // If the target slot already has the same name, do nothing
+        if (hourlyAssignments[panelId] && hourlyAssignments[panelId][hour] === name) {
+            return;
+        }
     }
     
     // If dropped in trash, delete the name completely
     if (targetContainer === 'trash') {
-
-
-
         // Remove from source container
         if (sourceContainer === 'names') {
+            // Remove from names list only if it's being deleted
             names = names.filter(n => n !== name);
         } else if (sourceContainer.includes('-')) {
             // This is an hourly slot
@@ -767,32 +883,26 @@ function processDrop(name, sourceContainer, targetContainer) {
     
     // Check if this is an hourly slot drop
     if (targetContainer.includes('-')) {
-
         const parts = targetContainer.split('-');
         // Ensure we handle panel IDs correctly, even if they contain hyphens
         const hour = parts.pop();
         const panelId = parts.join('-');
-
         
         // Make a deep copy of the hourlyAssignments to avoid reference issues
         const hourlyAssignmentsCopy = JSON.parse(JSON.stringify(hourlyAssignments));
         
         // Make sure hourlyAssignments for this panel exists
         if (!hourlyAssignmentsCopy[panelId]) {
-
             hourlyAssignmentsCopy[panelId] = Array(24).fill(null);
         }
         
         // If there's already a name in this hour slot, move it back to the names list
         if (hourlyAssignmentsCopy[panelId][hour]) {
-
             names.push(hourlyAssignmentsCopy[panelId][hour]);
         }
         
-        // Remove from source container
-        if (sourceContainer === 'names') {
-            names = names.filter(n => n !== name);
-        } else if (sourceContainer.includes('-')) {
+        // Remove from source container, but NOT from names list
+        if (sourceContainer.includes('-')) {
             // This is an hourly slot
             const sourceParts = sourceContainer.split('-');
             // Ensure we handle panel IDs correctly, even if they contain hyphens
@@ -801,20 +911,19 @@ function processDrop(name, sourceContainer, targetContainer) {
             if (hourlyAssignmentsCopy[sourcePanelId]) {
                 hourlyAssignmentsCopy[sourcePanelId][sourceHour] = null;
             }
-        } else {
+        } else if (sourceContainer !== 'names') {
+            // Only remove from non-names containers
             if (assignments[sourceContainer]) {
                 assignments[sourceContainer] = assignments[sourceContainer].filter(n => n !== name);
             }
         }
+        // Note: We don't remove from the names list when that's the source
         
         // Assign to the hour slot
-
         hourlyAssignmentsCopy[panelId][hour] = name;
         
         // Update the hourlyAssignments with the modified copy
         hourlyAssignments = hourlyAssignmentsCopy;
-        
-
         
         // Save to local storage
         saveToLocalStorage();
@@ -826,16 +935,13 @@ function processDrop(name, sourceContainer, targetContainer) {
     }
     
     // Standard container drop (not hourly)
-
     
     // Make a deep copy of the assignments to avoid reference issues
     const assignmentsCopy = JSON.parse(JSON.stringify(assignments));
     const hourlyAssignmentsCopy = JSON.parse(JSON.stringify(hourlyAssignments));
     
-    // Remove from source container
-    if (sourceContainer === 'names') {
-        names = names.filter(n => n !== name);
-    } else if (sourceContainer.includes('-')) {
+    // Remove from source container, but NOT from names list
+    if (sourceContainer.includes('-')) {
         // This is an hourly slot
         const sourceParts = sourceContainer.split('-');
         // Ensure we handle panel IDs correctly, even if they contain hyphens
@@ -844,15 +950,21 @@ function processDrop(name, sourceContainer, targetContainer) {
         if (hourlyAssignmentsCopy[sourcePanelId]) {
             hourlyAssignmentsCopy[sourcePanelId][sourceHour] = null;
         }
-    } else {
+    } else if (sourceContainer !== 'names') {
+        // Only remove from non-names containers
         if (assignmentsCopy[sourceContainer]) {
             assignmentsCopy[sourceContainer] = assignmentsCopy[sourceContainer].filter(n => n !== name);
         }
     }
+    // Note: We don't remove from the names list when that's the source
     
     // Add to target container
     if (targetContainer === 'names') {
-        names.push(name);
+        // Don't add to names list if coming from an hour row
+        if (!sourceContainer.includes('-')) {
+            names.push(name);
+        }
+        // When dragging from hour row to names list, we just remove it from the source
     } else {
         // Make sure the assignments array exists for this container
         if (!assignmentsCopy[targetContainer]) {
@@ -864,8 +976,6 @@ function processDrop(name, sourceContainer, targetContainer) {
     // Update the assignments and hourlyAssignments with the modified copies
     assignments = assignmentsCopy;
     hourlyAssignments = hourlyAssignmentsCopy;
-    
-
     
     // Save to local storage
     saveToLocalStorage();
@@ -1057,6 +1167,11 @@ function getDropTargetAtPoint(x, y) {
     
     // Find the first valid drop target element
     for (const element of elements) {
+        // Skip name panels - we don't want to drop on other name panels
+        if (element.classList.contains('name-panel')) {
+            continue;
+        }
+        
         // Skip schedule panel containers - we only want to drop on hour rows or other valid containers
         if (element.classList.contains('schedule-panel')) {
             continue;
@@ -1069,6 +1184,11 @@ function getDropTargetAtPoint(x, y) {
         // Check if any parent has a data-container attribute
         let parent = element.parentElement;
         while (parent) {
+            // Skip name panels - we don't want to drop on other name panels
+            if (parent.classList.contains('name-panel')) {
+                break;
+            }
+            
             // Skip schedule panel containers
             if (parent.classList.contains('schedule-panel')) {
                 break;
