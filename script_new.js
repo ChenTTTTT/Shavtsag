@@ -2,10 +2,12 @@
 let names = [];
 let assignments = {};
 let hourlyAssignments = {};
+let panelTimeIntervals = {}; // Store time intervals per panel
 let customPanelCounter = 1;
 let draggedName = null;
 let dragSourceContainer = null;
 let allDropContainers;
+const defaultTimeInterval = 60; // Default time interval in minutes (1 hour)
 
 // List of 24 aesthetically pleasing lighter pastel colors for name panels
 const nameColors = [
@@ -65,6 +67,26 @@ document.addEventListener('DOMContentLoaded', function() {
     cleanupHourlyAssignments();
     
     // Set up event listeners
+    const intervalInput = document.getElementById('interval-input');
+    intervalInput.addEventListener('change', function() {
+        const newInterval = parseInt(this.value);
+        if (newInterval < 10) {
+            alert('Time interval cannot be less than 10 minutes');
+            this.value = '10';
+            timeInterval = 10;
+        } else if (newInterval > 720) {
+            alert('Time interval cannot be more than 12 hours (720 minutes)');
+            this.value = '720';
+            timeInterval = 720;
+        } else {
+            timeInterval = newInterval;
+        }
+        
+        // Redraw all schedule panels with the new interval
+        renderSchedulePanels();
+        saveToLocalStorage();
+    });
+    
     nameInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
 
@@ -109,12 +131,160 @@ document.addEventListener('DOMContentLoaded', function() {
     setupDragAndDrop();
 });
 
-// Format hour for display (0-23 to 12 AM/PM format)
-function formatHour(hour) {
-    if (hour === 0) return '12 AM';
-    if (hour === 12) return '12 PM';
-    if (hour < 12) return `${hour} AM`;
-    return `${hour - 12} PM`;
+// Format time for display (hours and minutes in 24-hour format)
+function formatTime(timeInMinutes, panelId) {
+    // Calculate hours and minutes
+    const hours = Math.floor(timeInMinutes / 60);
+    const minutes = timeInMinutes % 60;
+    
+    // Pad with leading zeros if needed
+    const formattedHours = hours.toString().padStart(2, '0');
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    
+    return `${formattedHours}:${formattedMinutes}`;
+}
+
+// Format hour for display (0-23 to 24-hour format)
+function formatHour(hour, panelId) {
+    if (typeof hour === 'string') {
+        hour = parseInt(hour);
+    }
+    
+    // Get the panel-specific time interval or use default
+    const interval = panelId && panelTimeIntervals[panelId] ? panelTimeIntervals[panelId] : defaultTimeInterval;
+    
+    // If interval is 60 (default), just show hours
+    if (interval === 60) {
+        // Pad with leading zero if needed
+        return hour.toString().padStart(2, '0') + ':00';
+    } else {
+        // Calculate hours and minutes based on the interval
+        const totalMinutes = hour * interval;
+        return formatTime(totalMinutes);
+    }
+}
+
+// Load data from local storage
+function loadFromLocalStorage() {
+    try {
+        // Load names
+        const savedNames = localStorage.getItem('scheduleAppNames');
+        if (savedNames) {
+            names = JSON.parse(savedNames);
+        }
+        
+        // Load assignments
+        const savedAssignments = localStorage.getItem('scheduleAppAssignments');
+        if (savedAssignments) {
+            assignments = JSON.parse(savedAssignments);
+        }
+        
+        // Load hourly assignments
+        const savedHourlyAssignments = localStorage.getItem('scheduleAppHourlyAssignments');
+        if (savedHourlyAssignments) {
+            hourlyAssignments = JSON.parse(savedHourlyAssignments);
+        }
+        
+        // Load panel counter
+        const savedPanelCounter = localStorage.getItem('scheduleAppCustomPanelCounter');
+        if (savedPanelCounter) {
+            customPanelCounter = parseInt(savedPanelCounter);
+        }
+        
+        // Load color mappings
+        const savedNameColorMap = localStorage.getItem('scheduleAppNameColorMap');
+        if (savedNameColorMap) {
+            nameColorMap = JSON.parse(savedNameColorMap);
+        }
+        
+        const savedUsedColorCount = localStorage.getItem('scheduleAppUsedColorCount');
+        if (savedUsedColorCount) {
+            usedColorCount = JSON.parse(savedUsedColorCount);
+        }
+        
+        // Load panel time intervals
+        const savedPanelTimeIntervals = localStorage.getItem('scheduleAppPanelTimeIntervals');
+        if (savedPanelTimeIntervals) {
+            panelTimeIntervals = JSON.parse(savedPanelTimeIntervals);
+        }
+    } catch (error) {
+        console.error('Error loading from local storage:', error);
+    }
+}
+
+// Refresh a panel with a new time interval
+function refreshPanelWithNewInterval(panelId) {
+    // Get the panel element
+    const panelElement = document.getElementById(`${panelId}-panel`);
+    if (!panelElement) return;
+    
+    // Get the schedule items container
+    const scheduleItemsContainer = panelElement.querySelector('.schedule-items');
+    if (!scheduleItemsContainer) return;
+    
+    // Clear the container
+    scheduleItemsContainer.innerHTML = '';
+    
+    // Get the panel-specific time interval
+    const interval = panelTimeIntervals[panelId] || defaultTimeInterval;
+    
+    // Calculate how many time slots to create based on the interval
+    const minutesInDay = 24 * 60;
+    const totalSlots = Math.floor(minutesInDay / interval);
+    
+    // Store the current assignments
+    const currentAssignments = {};
+    if (hourlyAssignments[panelId]) {
+        Object.keys(hourlyAssignments[panelId]).forEach(timeKey => {
+            currentAssignments[timeKey] = hourlyAssignments[panelId][timeKey];
+        });
+    }
+    
+    // Reset hourly assignments for this panel
+    hourlyAssignments[panelId] = {};
+    
+    // Create time interval rows
+    for (let slot = 0; slot < totalSlots; slot++) {
+        const timeInMinutes = slot * interval;
+        const hourRow = document.createElement('div');
+        hourRow.className = 'hour-row';
+        hourRow.dataset.timeMinutes = timeInMinutes;
+        hourRow.dataset.container = `${panelId}-${timeInMinutes}`;
+        
+        // Create the time label
+        const timeLabel = document.createElement('div');
+        timeLabel.className = 'hour-label';
+        timeLabel.textContent = formatTime(timeInMinutes);
+        
+        // Create the slot for the name
+        const nameSlot = document.createElement('div');
+        nameSlot.className = 'name-slot';
+        
+        // Add the elements to the row
+        hourRow.appendChild(timeLabel);
+        hourRow.appendChild(nameSlot);
+        
+        // Add the row to the schedule items container
+        scheduleItemsContainer.appendChild(hourRow);
+        
+        // Check if there was an assignment for this time slot
+        const hourKey = Math.floor(timeInMinutes / 60);
+        if (currentAssignments[hourKey]) {
+            // Create a name panel for this assignment
+            const name = currentAssignments[hourKey];
+            hourlyAssignments[panelId][timeInMinutes] = name;
+            
+            const namePanel = createNamePanel(name, `${panelId}-${timeInMinutes}`, nameSlot);
+            nameSlot.appendChild(namePanel);
+        }
+    }
+    
+    // Update drop containers
+    allDropContainers = document.querySelectorAll('[data-container]');
+    setupDragAndDrop();
+    
+    // Save changes to local storage
+    saveToLocalStorage();
 }
 
 // Add a new name
@@ -393,6 +563,9 @@ function saveToLocalStorage() {
     // Save color assignments
     localStorage.setItem('scheduleAppNameColorMap', JSON.stringify(nameColorMap));
     localStorage.setItem('scheduleAppUsedColorCount', JSON.stringify(usedColorCount));
+    
+    // Save panel time intervals
+    localStorage.setItem('scheduleAppPanelTimeIntervals', JSON.stringify(panelTimeIntervals));
 }
 
 // Clean up invalid panel entries in hourlyAssignments
@@ -570,12 +743,58 @@ function createSavedPanel(panelId, customName) {
         deleteSchedulePanel(panelId);
     });
     
+    // Create time interval control container
+    const intervalContainer = document.createElement('div');
+    intervalContainer.className = 'panel-interval-container';
+    
+    // Create interval input
+    const intervalLabel = document.createElement('label');
+    intervalLabel.textContent = 'Interval (min): ';
+    intervalLabel.setAttribute('for', `interval-input-${panelId}`);
+    
+    const intervalInput = document.createElement('input');
+    intervalInput.type = 'number';
+    intervalInput.id = `interval-input-${panelId}`;
+    intervalInput.className = 'panel-interval-input';
+    intervalInput.min = '10';
+    intervalInput.max = '720'; // 12 hours in minutes
+    intervalInput.value = panelTimeIntervals[panelId] || defaultTimeInterval;
+    
+    // Create update button
+    const updateButton = document.createElement('button');
+    updateButton.className = 'update-interval-btn';
+    updateButton.textContent = 'Update';
+    updateButton.addEventListener('click', function() {
+        const newInterval = parseInt(intervalInput.value);
+        if (newInterval < 10) {
+            alert('Time interval cannot be less than 10 minutes');
+            intervalInput.value = '10';
+            panelTimeIntervals[panelId] = 10;
+        } else if (newInterval > 720) {
+            alert('Time interval cannot be more than 12 hours (720 minutes)');
+            intervalInput.value = '720';
+            panelTimeIntervals[panelId] = 720;
+        } else {
+            panelTimeIntervals[panelId] = newInterval;
+        }
+        
+        // Redraw this panel with the new interval
+        refreshPanelWithNewInterval(panelId);
+        saveToLocalStorage();
+    });
+    
+    // Add elements to interval container
+    intervalContainer.appendChild(intervalLabel);
+    intervalContainer.appendChild(intervalInput);
+    intervalContainer.appendChild(updateButton);
+    
     // Add buttons to container
     buttonContainer.appendChild(editButton);
     buttonContainer.appendChild(deleteButton);
     
-    // Add title and buttons to header
+    // Add title, interval container, and buttons to header
     panelHeader.appendChild(panelTitle);
+    panelHeader.appendChild(intervalContainer);
     panelHeader.appendChild(buttonContainer);
     
     // Add header to panel
