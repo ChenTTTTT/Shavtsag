@@ -227,13 +227,56 @@ function refreshPanelWithNewInterval(panelId) {
     const minutesInDay = 24 * 60;
     const totalSlots = Math.floor(minutesInDay / interval);
     
-    // Store the current assignments
+    // Store the current assignments with exact time in minutes
     const currentAssignments = {};
     if (hourlyAssignments[panelId]) {
         Object.keys(hourlyAssignments[panelId]).forEach(timeKey => {
             currentAssignments[timeKey] = hourlyAssignments[panelId][timeKey];
         });
     }
+    
+    // Track which times will still exist after the interval change
+    const newTimeSlots = [];
+    for (let slot = 0; slot < totalSlots; slot++) {
+        newTimeSlots.push(slot * interval);
+    }
+    
+    // Check for assignments that will no longer have a time slot
+    // and move them back to the names list or preserve them if they align with new slots
+    const assignmentsToRemove = [];
+    const assignmentsToPreserve = {};
+    
+    Object.keys(currentAssignments).forEach(timeKey => {
+        const timeInMinutes = parseInt(timeKey);
+        const name = currentAssignments[timeKey];
+        
+        if (!name) return; // Skip empty assignments
+        
+        // Check if this exact time exists in the new time slots
+        if (newTimeSlots.includes(timeInMinutes)) {
+            // This exact time still exists, preserve the assignment
+            assignmentsToPreserve[timeInMinutes] = name;
+        } else {
+            // This exact time no longer exists
+            // Check if this time is divisible by the new interval
+            // (e.g., 00:20 with new interval of 20 minutes)
+            if (timeInMinutes % interval === 0) {
+                // This time aligns with the new interval, preserve it
+                assignmentsToPreserve[timeInMinutes] = name;
+            } else {
+                // This time doesn't align with any new slot, move name back to names list
+                if (!names.includes(name)) {
+                    names.push(name);
+                }
+                assignmentsToRemove.push(timeKey);
+            }
+        }
+    });
+    
+    // Remove assignments that no longer have a time slot
+    assignmentsToRemove.forEach(timeKey => {
+        delete currentAssignments[timeKey];
+    });
     
     // Reset hourly assignments for this panel
     hourlyAssignments[panelId] = {};
@@ -262,11 +305,18 @@ function refreshPanelWithNewInterval(panelId) {
         // Add the row to the schedule items container
         scheduleItemsContainer.appendChild(hourRow);
         
-        // Check if there was an assignment for this time slot
-        const hourKey = Math.floor(timeInMinutes / 60);
-        if (currentAssignments[hourKey]) {
+        // Check if there was an assignment for this exact time slot
+        // First check in preserved assignments, then in current assignments
+        if (assignmentsToPreserve[timeInMinutes]) {
+            // Create a name panel for this preserved assignment
+            const name = assignmentsToPreserve[timeInMinutes];
+            hourlyAssignments[panelId][timeInMinutes] = name;
+            
+            const namePanel = createNamePanel(name, `${panelId}-${timeInMinutes}`, nameSlot);
+            nameSlot.appendChild(namePanel);
+        } else if (currentAssignments[timeInMinutes]) {
             // Create a name panel for this assignment
-            const name = currentAssignments[hourKey];
+            const name = currentAssignments[timeInMinutes];
             hourlyAssignments[panelId][timeInMinutes] = name;
             
             const namePanel = createNamePanel(name, `${panelId}-${timeInMinutes}`, nameSlot);
@@ -277,6 +327,9 @@ function refreshPanelWithNewInterval(panelId) {
     // Update drop containers
     allDropContainers = document.querySelectorAll('[data-container]');
     setupDragAndDrop();
+    
+    // Render the updated names list
+    renderNamePanels();
     
     // Save changes to local storage
     saveToLocalStorage();
@@ -1077,26 +1130,14 @@ function editPanelName(panelId) {
 
 // Delete a schedule panel
 function deleteSchedulePanel(panelId) {
-    // Move all names from the panel back to the names list
-    if (assignments[panelId] && assignments[panelId].length > 0) {
-        // Add all names back to the names list
-        names = [...names, ...assignments[panelId]];
-        
+    // Simply clear the panel's assignments without moving names back to the names list
+    if (assignments[panelId]) {
         // Clear the panel's assignments
         assignments[panelId] = [];
     }
     
-    // Move all hourly assignments back to the names list
+    // Simply delete hourly assignments without moving names back to the names list
     if (hourlyAssignments[panelId]) {
-        // For each hour, check if there's a name assigned
-        for (let hour = 0; hour < 24; hour++) {
-            const assignedName = hourlyAssignments[panelId][hour];
-            if (assignedName) {
-                // Add the name back to the names list
-                names.push(assignedName);
-            }
-        }
-        
         // Remove the panel's hourly assignments
         delete hourlyAssignments[panelId];
     }
