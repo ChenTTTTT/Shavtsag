@@ -68,6 +68,28 @@ document.addEventListener('DOMContentLoaded', function() {
     cleanupHourlyAssignments();
     
     // Set up event listeners
+    const intervalInput = document.getElementById('interval-input');
+    intervalInput.addEventListener('change', function() {
+        const newInterval = parseInt(this.value);
+        if (newInterval < 10) {
+            alert('Time interval cannot be less than 10 minutes');
+            this.value = '10';
+            globalTimeInterval = 10;
+        } else if (newInterval > 720) {
+            alert('Time interval cannot be more than 12 hours (720 minutes)');
+            this.value = '720';
+            globalTimeInterval = 720;
+        } else {
+            globalTimeInterval = newInterval;
+        }
+        
+        // Update all panels to use the new global interval
+        updateAllPanelsTimeInterval();
+        
+        // Redraw all schedule panels with the new interval
+        renderSchedulePanels();
+        saveToLocalStorage();
+    });
     
     nameInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
@@ -201,6 +223,11 @@ function loadFromLocalStorage() {
         const savedGlobalTimeInterval = localStorage.getItem('scheduleAppGlobalTimeInterval');
         if (savedGlobalTimeInterval) {
             globalTimeInterval = parseInt(savedGlobalTimeInterval);
+            // Update the interval input field with the saved value
+            const intervalInput = document.getElementById('interval-input');
+            if (intervalInput) {
+                intervalInput.value = globalTimeInterval;
+            }
         }
     } catch (error) {
         console.error('Error loading from local storage:', error);
@@ -846,7 +873,7 @@ function createSavedPanel(panelId, customName) {
         // Create the hour label
         const hourLabel = document.createElement('div');
         hourLabel.className = 'hour-label';
-        hourLabel.textContent = formatHour(hour, panelId);
+        hourLabel.textContent = formatHour(hour);
         
         // Create the slot for the name
         const nameSlot = document.createElement('div');
@@ -927,51 +954,6 @@ function addSchedulePanel() {
         </svg>
     `;
     
-    // Create time interval control container
-    const intervalContainer = document.createElement('div');
-    intervalContainer.className = 'panel-interval-container';
-    
-    // Create interval input
-    const intervalLabel = document.createElement('label');
-    intervalLabel.textContent = 'Interval (min): ';
-    intervalLabel.setAttribute('for', `interval-input-${panelId}`);
-    
-    const intervalInput = document.createElement('input');
-    intervalInput.type = 'number';
-    intervalInput.id = `interval-input-${panelId}`;
-    intervalInput.className = 'panel-interval-input interval-input';
-    intervalInput.min = '10';
-    intervalInput.max = '720'; // 12 hours in minutes
-    intervalInput.value = globalTimeInterval; // Use the global time interval
-    
-    // Create update button
-    const updateButton = document.createElement('button');
-    updateButton.className = 'update-interval-btn';
-    updateButton.textContent = 'Update';
-    updateButton.addEventListener('click', function() {
-        const newInterval = parseInt(intervalInput.value);
-        if (newInterval < 10) {
-            alert('Time interval cannot be less than 10 minutes');
-            intervalInput.value = '10';
-            panelTimeIntervals[panelId] = 10;
-        } else if (newInterval > 720) {
-            alert('Time interval cannot be more than 12 hours (720 minutes)');
-            intervalInput.value = '720';
-            panelTimeIntervals[panelId] = 720;
-        } else {
-            panelTimeIntervals[panelId] = newInterval;
-        }
-        
-        // Redraw this panel with the new interval
-        refreshPanelWithNewInterval(panelId);
-        saveToLocalStorage();
-    });
-    
-    // Add elements to interval container
-    intervalContainer.appendChild(intervalLabel);
-    intervalContainer.appendChild(intervalInput);
-    intervalContainer.appendChild(updateButton);
-    
     // Create the container for schedule items
     const scheduleItemsContainer = document.createElement('div');
     scheduleItemsContainer.className = 'schedule-items';
@@ -986,7 +968,7 @@ function addSchedulePanel() {
         // Create the hour label
         const hourLabel = document.createElement('div');
         hourLabel.className = 'hour-label';
-        hourLabel.textContent = formatHour(hour, panelId);
+        hourLabel.textContent = formatHour(hour);
         
         // Create the slot for the name
         const nameSlot = document.createElement('div');
@@ -1004,7 +986,6 @@ function addSchedulePanel() {
     buttonContainer.appendChild(editButton);
     buttonContainer.appendChild(deleteButton);
     panelHeader.appendChild(panelTitle);
-    panelHeader.appendChild(intervalContainer);
     panelHeader.appendChild(buttonContainer);
     panelElement.appendChild(panelHeader);
     panelElement.appendChild(scheduleItemsContainer);
